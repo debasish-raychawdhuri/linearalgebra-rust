@@ -112,7 +112,7 @@ impl<'a, F: Ring> Matrix<'a, F> {
              }
              v.push(r);
          }
-         return Matrix::new(self.ring, v);
+         return Matrix::new(&(self.ring), v);
      }
 }
 
