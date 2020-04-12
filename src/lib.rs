@@ -24,7 +24,7 @@
 extern crate num_bigint as num;
 pub mod euclidian_domain;
 pub mod int_ring;
-pub mod modular_field;
+pub mod field;
 
 pub trait Ring: Clone {
     type RingMember: Clone;
@@ -37,7 +37,7 @@ pub trait Ring: Clone {
 
 pub trait Field: Ring + Clone {
     type InvZeroError;
-    fn inv(value: &Self::RingMember) -> Result<Self::RingMember, Self::InvZeroError>;
+    fn inv(&self, value: &Self::RingMember) -> Result<Self::RingMember, Self::InvZeroError>;
 }
 
 #[derive(PartialEq, Clone, Debug)]

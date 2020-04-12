@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 num-bigint = "0.2.6"
+num-complex = "0.2.4"
