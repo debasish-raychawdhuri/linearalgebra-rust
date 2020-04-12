@@ -48,6 +48,20 @@ pub struct Matrix<F: Ring> {
     data: Vec<Vec<F::RingMember>>,
 }
 
+impl <F:Ring> Matrix<F> {
+    pub fn rows(&self) -> usize {
+        self.rows
+    }
+
+    pub fn columns(&self) -> usize{
+        self.columns
+    }
+
+    pub fn value_at(&self, row:usize, col:usize) -> F::RingMember {
+        self.data[row][col].clone()
+    }
+}
+
 impl<'a, F: Ring> Matrix<F> {
     pub fn new(ring: F, v: Vec<Vec<F::RingMember>>) -> Self {
         let rows = v.len();
