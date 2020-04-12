@@ -50,9 +50,9 @@ pub struct Matrix<'a, F: Ring> {
 
 impl<'a, F: Ring> Matrix<'a, F> {
     pub fn new(ring: &'a F, v: Vec<Vec<F::RingMember>>) -> Self {
-        let rows = v.len();
-        let columns = v[0].len();
-        let data = vec![vec![ring.zero(); rows]; columns];
+        let columns = v.len();
+        let rows = v[0].len();
+        let data = v;
         Matrix {
             ring: &ring,
             rows,
@@ -105,14 +105,14 @@ impl<'a, F: Ring> Matrix<'a, F> {
          let rows = self.columns;
          let columns = self.rows;
          let mut v = Vec::new();
-         for i in 0..rows {
+         for j in 0..columns {
              let mut r = Vec::new();
-             for j in 0..columns {
+             for i in 0..rows {
                  r.push(self.data[i][j].clone());
              }
              v.push(r);
          }
-         return Matrix::new(&(self.ring), v);
+         return Matrix::new(&self.ring, v);
      }
 }
 
@@ -125,7 +125,7 @@ mod tests {
         let ring = I32Ring {};
         let lhs: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![1, 2, 5], vec![3, 4, 6]]);
         let rhs: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![2, 3, 7], vec![4, 5, 8]]);
-        let exp_res: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![3, 5, 11], vec![7, 9, 14]]);
+        let exp_res: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![3, 5, 12], vec![7, 9, 14]]);
         let res = lhs.add(&rhs).expect("Error");
         assert_eq!(exp_res, res);
     }
@@ -134,7 +134,7 @@ mod tests {
         let ring = I32Ring {};
         let lhs: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![1, 2, 3], vec![3, 4, 5]]);
         let rhs: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![2, 3], vec![4, 5], vec![1,2]]);
-        let exp_res: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![13, 19], vec![27, 39]]);
+        let exp_res: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![11, 16, 21], vec![19, 28, 37], vec![7, 10, 13]]);
         let res = lhs.mul(&rhs).expect("Error");
         assert_eq!(exp_res, res);
     }
