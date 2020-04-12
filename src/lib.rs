@@ -41,20 +41,20 @@ pub trait Field: Ring + Clone {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub struct Matrix<'a, F: Ring> {
-    ring: &'a F,
+pub struct Matrix<F: Ring> {
+    ring: F,
     rows: usize,
     columns: usize,
     data: Vec<Vec<F::RingMember>>,
 }
 
-impl<'a, F: Ring> Matrix<'a, F> {
-    pub fn new(ring: &'a F, v: Vec<Vec<F::RingMember>>) -> Self {
-        let columns = v.len();
-        let rows = v[0].len();
+impl<'a, F: Ring> Matrix<F> {
+    pub fn new(ring: F, v: Vec<Vec<F::RingMember>>) -> Self {
+        let rows = v.len();
+        let columns = v[0].len();
         let data = v;
         Matrix {
-            ring: &ring,
+            ring: ring.clone(),
             rows,
             columns,
             data,
@@ -66,14 +66,14 @@ impl<'a, F: Ring> Matrix<'a, F> {
             return Result::Err(String::from("Illegal matrix operation"));
         } else {
             let mut ans: Matrix<F> = Matrix {
-                ring: self.ring,
+                ring: self.ring.clone(),
                 rows: self.rows,
                 columns: self.columns,
-                data: vec![vec![self.ring.zero(); self.rows]; self.columns],
+                data: vec![vec![self.ring.zero(); self.columns]; self.rows],
             };
             for i in 0..self.rows {
                 for j in 0..self.columns {
-                    ans.data[j][i] = self.ring.add(&self.data[j][i], &rhs.data[j][i]);
+                    ans.data[i][j] = self.ring.add(&self.data[i][j], &rhs.data[i][j]);
                 }
             }
             Ok(ans)
@@ -85,34 +85,38 @@ impl<'a, F: Ring> Matrix<'a, F> {
             return Result::Err(String::from("Illegal matrix operation"));
         } else {
             let mut ans: Matrix<F> = Matrix {
-                ring: self.ring,
+                ring: self.ring.clone(),
                 rows: self.rows,
                 columns: rhs.columns,
-                data: vec![vec![self.ring.zero(); self.rows]; rhs.columns],
+                data: vec![vec![self.ring.zero(); rhs.columns]; self.rows],
             };
             for i in 0..self.rows {
                 for j in 0..rhs.columns {
                     for k in 0..self.columns {
-                        let prod = self.ring.mul(&self.data[k][i], &rhs.data[j][k]);
-                        ans.data[j][i] = self.ring.add(&ans.data[j][i], &prod);
+                        let prod = self.ring.mul(&self.data[i][k], &rhs.data[k][j]);
+                        ans.data[i][j] = self.ring.add(&ans.data[i][j], &prod);
                     }
                 }
             }
             Ok(ans)
         }
     }
-     pub fn transpose(&self) -> Matrix<F> {
+     pub fn transpose(&'a self) -> Matrix<F> {
          let rows = self.columns;
          let columns = self.rows;
-         let mut v = Vec::new();
+         let mut ans: Matrix<F> = Matrix {
+             ring: self.ring.clone(),
+             rows: rows,
+             columns: columns,
+             data: vec![vec![self.ring.zero(); columns]; rows],
+         };
          for j in 0..columns {
-             let mut r = Vec::new();
              for i in 0..rows {
-                 r.push(self.data[i][j].clone());
+                 ans.data[i][j] = self.data[j][i].clone();
              }
-             v.push(r);
+
          }
-         return Matrix::new(&self.ring, v);
+         return ans;
      }
 }
 
@@ -123,26 +127,36 @@ mod tests {
     #[test]
     fn test_add() {
         let ring = I32Ring {};
-        let lhs: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![1, 2, 5], vec![3, 4, 6]]);
-        let rhs: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![2, 3, 7], vec![4, 5, 8]]);
-        let exp_res: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![3, 5, 12], vec![7, 9, 14]]);
+        let lhs: Matrix<I32Ring> = Matrix::new(ring.clone(), vec![vec![1, 2, 5], vec![3, 4, 6]]);
+        let rhs: Matrix<I32Ring> = Matrix::new(ring.clone(), vec![vec![2, 3, 7], vec![4, 5, 8]]);
+        let exp_res: Matrix<I32Ring> = Matrix::new(ring, vec![vec![3, 5, 12], vec![7, 9, 14]]);
         let res = lhs.add(&rhs).expect("Error");
         assert_eq!(exp_res, res);
     }
     #[test]
     fn test_mul() {
         let ring = I32Ring {};
-        let lhs: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![1, 2, 3], vec![3, 4, 5]]);
-        let rhs: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![2, 3], vec![4, 5], vec![1,2]]);
-        let exp_res: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![11, 16, 21], vec![19, 28, 37], vec![7, 10, 13]]);
+        let lhs: Matrix<I32Ring> = Matrix::new(ring.clone(), vec![vec![1, 2, 3], vec![3, 4, 5]]);
+        let rhs: Matrix<I32Ring> = Matrix::new(ring.clone(), vec![vec![2, 3], vec![4, 5], vec![1,2]]);
+        let exp_res: Matrix<I32Ring> = Matrix::new(ring, vec![vec![13,19], vec![27,39]]);
         let res = lhs.mul(&rhs).expect("Error");
         assert_eq!(exp_res, res);
     }
+
+    fn adder(ring: I32Ring) -> Matrix<I32Ring> {
+        let lhs: Matrix<I32Ring> = Matrix::new(ring.clone(), vec![vec![1, 2, 5], vec![3, 4, 6]]);
+        let rhs: Matrix<I32Ring> = Matrix::new(ring, vec![vec![2, 3, 7], vec![4, 5, 8]]);
+        lhs.add(&rhs).unwrap()
+    }
+    fn transposer(ring: I32Ring) -> Matrix<I32Ring> {
+         Matrix::new(ring, vec![vec![1, 3, 5], vec![2, 4, 6]]).transpose()
+    }
+
     #[test]
     fn test_transpose() {
         let ring = I32Ring {};
-        let lhs: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![1, 2], vec![3, 4], vec![5,6]]);
-        let exp_res: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![1, 3, 5], vec![2, 4, 6]]);
+        let lhs: Matrix<I32Ring> = Matrix::new(ring.clone(), vec![vec![1, 2], vec![3, 4], vec![5,6]]);
+        let exp_res: Matrix<I32Ring> = Matrix::new(ring, vec![vec![1, 3, 5], vec![2, 4, 6]]);
         let res = lhs.transpose();
         assert_eq!(exp_res, res);
     }

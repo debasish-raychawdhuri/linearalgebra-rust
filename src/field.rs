@@ -7,6 +7,7 @@ pub struct ModularField {
     modulus: BigUint,
 }
 
+
 impl Ring for ModularField {
     type RingMember = BigUint;
     fn neg(&self, x: &BigUint) -> BigUint {
@@ -26,7 +27,7 @@ impl Ring for ModularField {
         BigUint::from(1u64)
     }
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct ComplexField;
 impl Ring for ComplexField {
     type RingMember = Complex<f64>;
