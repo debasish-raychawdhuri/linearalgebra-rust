@@ -75,6 +75,29 @@ impl<'a, F: Ring> Matrix<F> {
         }
     }
 
+    pub fn one(ring: F, rows:usize) -> Self {
+        let mut data = vec![vec![ring.zero(); rows]; rows];
+        for i in 0..rows {
+            data[i][i] = ring.one();
+        }
+        Matrix {
+            ring: ring.clone(),
+            rows,
+            columns:rows,
+            data,
+        }
+    }
+
+    pub fn zero(ring: F, rows:usize) -> Self {
+        let data = vec![vec![ring.zero(); rows]; rows];
+        Matrix {
+            ring: ring.clone(),
+            rows,
+            columns:rows,
+            data,
+        }
+    }
+
     pub fn add(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, String> {
         if self.rows != rhs.rows || self.columns != rhs.columns {
             return Result::Err(String::from("Illegal matrix operation"));
@@ -138,6 +161,22 @@ impl<'a, F: Ring> Matrix<F> {
 mod tests {
     use super::*;
     use int_ring::I32Ring;
+    #[test]
+    fn test_zero() {
+        let ring = I32Ring {};
+        let lhs: Matrix<I32Ring> = Matrix::zero(ring.clone(), 4);
+        let res =  Matrix::new(ring.clone(), vec![vec![0i32;4];4]);
+        assert_eq!(lhs, res);
+    }
+
+    #[test]
+    fn test_one() {
+        let ring = I32Ring {};
+        let lhs: Matrix<I32Ring> = Matrix::one(ring.clone(), 4);
+        let res =  Matrix::new(ring.clone(), vec![vec![1,0,0,0],vec![0,1,0,0], vec![0,0,1,0], vec![0,0,0,1]]);
+        assert_eq!(lhs, res);
+    }
+
     #[test]
     fn test_add() {
         let ring = I32Ring {};
