@@ -22,12 +22,14 @@
  */
 
 extern crate num_bigint as num;
+use core::fmt::Debug;
+
 pub mod euclidian_domain;
 pub mod int_ring;
 pub mod field;
 
 pub trait Ring: Clone {
-    type RingMember: Clone;
+    type RingMember: Clone+PartialEq;
     fn add(&self, lhs: &Self::RingMember, rhs: &Self::RingMember) -> Self::RingMember;
     fn mul(&self, lhs: &Self::RingMember, rhs: &Self::RingMember) -> Self::RingMember;
     fn neg(&self, lhs: &Self::RingMember) -> Self::RingMember;
@@ -36,7 +38,7 @@ pub trait Ring: Clone {
 }
 
 pub trait Field: Ring + Clone {
-    type InvZeroError;
+    type InvZeroError:Debug;
     fn inv(&self, value: &Self::RingMember) -> Result<Self::RingMember, Self::InvZeroError>;
 }
 
@@ -62,18 +64,96 @@ impl <F:Ring> Matrix<F> {
     }
 }
 
-impl<'a, F: Ring> Matrix<F> {
+impl<F:Field> Matrix<F> {
+    fn swap_rows (&self, data1: &mut Vec<Vec<F::RingMember>>,
+        data2:&mut Vec<Vec<F::RingMember>>, r1:usize, r2:usize){
+        if r1==r2 {
+            return;
+        }
+        data1.swap(r1, r2);
+        data2.swap(r1, r2);
+
+    }
+    fn add_multiple_of(&self, data1: &mut Vec<Vec<F::RingMember>>,
+        data2:&mut Vec<Vec<F::RingMember>>, r1:usize, r2:usize, mul:F::RingMember) {
+
+        for i in 0..data1[r1].len(){
+            data1[r1][i] = self.ring.add(&data1[r1][i],&self.ring.mul(&mul,&data1[r2][i]));
+            data2[r1][i] = self.ring.add(&data2[r1][i],&self.ring.mul(&mul,&data2[r2][i]));
+        }
+
+    }
+    fn scale_row(&self,data1: &mut Vec<Vec<F::RingMember>>,
+        data2:&mut Vec<Vec<F::RingMember>>, r1:usize, mul:F::RingMember) {
+        for i in 0..data1[r1].len() {
+            data1[r1][i] = self.ring.mul(&mul,&data1[r1][i]);
+            data2[r1][i] = self.ring.mul(&mul,&data2[r1][i]);
+        }
+    }
+
+    fn find_non_zero_pivot(&self, data1:&Vec<Vec<F::RingMember>>, start: usize) -> Result<usize, &str> {
+        for i in start..self.rows{
+            if data1[i][start] != self.ring.zero() {
+                return Ok(i);
+            }
+        }
+        return Err("No non-zero pivot found");
+    }
+
+    pub fn inverse(&self) -> Result<Self, &str>{
+        if self.rows != self.columns {
+            return Err("Trying to invert a rectangular matrix")
+        }
+        let mut data1 = self.data.clone();
+        let mut data2 = Self::one(self.ring.clone(),self.rows).data;
+
+        //triangulation of the matrix. make it an upper triangular matrix
+        for i in 0..self.rows {
+            let pivot = self.find_non_zero_pivot(&data1, i);
+            match pivot {
+                Ok(p) => {self.swap_rows(&mut data1, &mut data2, i, p);}
+                Err(x) => {return Err(x);}
+            }
+
+            let d = data1[i][i].clone();
+            match self.ring.inv(&d) {
+                Ok(d_inv) => {
+                    self.scale_row(&mut data1, &mut data2, i, d_inv);
+                }
+                Err(_) => {
+                    return Err("Trying to invert a non-invertible matrix");
+                }
+            }
+            for j in i+1..self.rows {
+                let mult = self.ring.neg(&data1[j][i]);
+                self.add_multiple_of(&mut data1, &mut data2, j, i, mult);
+            }
+
+        }
+
+        //Now we make it a identity matrix. Notice that all diagonal entries are already 1
+
+
+        return Err("");
+    }
+}
+
+impl<F: Ring> Matrix<F> {
     pub fn new(ring: F, v: Vec<Vec<F::RingMember>>) -> Self {
         let rows = v.len();
         let columns = v[0].len();
         let data = v;
         Matrix {
-            ring: ring.clone(),
+            ring: ring,
             rows,
             columns,
             data,
         }
     }
+
+    // pub fn flatten(ring: F, parts: Vec<Vec<Self>>) -> Result<Self, String>{
+    //
+    // }
 
     pub fn one(ring: F, rows:usize) -> Self {
         let mut data = vec![vec![ring.zero(); rows]; rows];
@@ -81,7 +161,7 @@ impl<'a, F: Ring> Matrix<F> {
             data[i][i] = ring.one();
         }
         Matrix {
-            ring: ring.clone(),
+            ring: ring,
             rows,
             columns:rows,
             data,
@@ -98,9 +178,9 @@ impl<'a, F: Ring> Matrix<F> {
         }
     }
 
-    pub fn add(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, String> {
+    pub fn add(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, &str> {
         if self.rows != rhs.rows || self.columns != rhs.columns {
-            return Result::Err(String::from("Illegal matrix operation"));
+            return Result::Err("Illegal matrix operation");
         } else {
             let mut ans: Matrix<F> = Matrix {
                 ring: self.ring.clone(),
@@ -117,9 +197,9 @@ impl<'a, F: Ring> Matrix<F> {
         }
     }
     //vanila matrix multiplication
-    pub fn mul(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, String> {
+    pub fn mul(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, &str> {
         if self.columns != rhs.rows {
-            return Result::Err(String::from("Illegal matrix operation"));
+            return Result::Err("Illegal matrix operation");
         } else {
             let mut ans: Matrix<F> = Matrix {
                 ring: self.ring.clone(),
@@ -138,7 +218,7 @@ impl<'a, F: Ring> Matrix<F> {
             Ok(ans)
         }
     }
-     pub fn transpose(&'a self) -> Matrix<F> {
+     pub fn transpose(&self) -> Matrix<F> {
          let rows = self.columns;
          let columns = self.rows;
          let mut ans: Matrix<F> = Matrix {
