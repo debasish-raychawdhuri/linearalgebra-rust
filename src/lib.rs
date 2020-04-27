@@ -133,8 +133,16 @@ impl<F:Field> Matrix<F> {
 
         //Now we make it a identity matrix. Notice that all diagonal entries are already 1
 
+        for i in 0..self.rows {
+            for j in i+1..self.rows{
+                let x = self.rows-i-1;
+                let y = self.rows-j-1;
+                let mult = self.ring.neg(&data1[y][x].clone());
+                self.add_multiple_of(&mut data1, &mut data2, y, x, mult);
+            }
+        }
 
-        return Err("");
+        return Ok(Matrix::new(self.ring.clone(), data2));
     }
 }
 
@@ -239,7 +247,8 @@ impl<F: Ring> Matrix<F> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::field::F64Field;
+use super::*;
     use int_ring::I32Ring;
     #[test]
     fn test_zero() {
@@ -292,5 +301,15 @@ mod tests {
         let exp_res: Matrix<I32Ring> = Matrix::new(ring, vec![vec![1, 3, 5], vec![2, 4, 6]]);
         let res = lhs.transpose();
         assert_eq!(exp_res, res);
+    }
+
+    #[test]
+    fn test_inverse() {
+        let ring = F64Field;
+        let mat: Matrix<F64Field> = Matrix::new(ring.clone(), vec![vec![1.0, 2.0], vec![2.0, 1.0]]);
+        let inv = mat.inverse().expect("");
+        let exp_inv =  Matrix::new(ring.clone(), vec![vec![-1.0/3.0, 2.0/3.0], vec![2.0/3.0, -1.0/3.0]]);
+        assert_eq!(exp_inv, inv);
+
     }
 }
