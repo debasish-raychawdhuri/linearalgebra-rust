@@ -27,8 +27,8 @@ use core::fmt::Debug;
 pub mod euclidian_domain;
 pub mod int_ring;
 pub mod field;
-
 use num::BigUint;
+use std::ops::*;
 
 pub trait Ring: Clone {
     type RingMember: Clone+PartialEq;
@@ -93,18 +93,18 @@ impl<F:Field> Matrix<F> {
         }
     }
 
-    fn find_non_zero_pivot(&self, data1:&Vec<Vec<F::RingMember>>, start: usize) -> Result<usize, &str> {
+    fn find_non_zero_pivot(&self, data1:&Vec<Vec<F::RingMember>>, start: usize) -> Result<usize, String> {
         for i in start..self.rows{
             if data1[i][start] != self.ring.zero() {
                 return Ok(i);
             }
         }
-        return Err("No non-zero pivot found");
+        return Err(String::from("No non-zero pivot found"));
     }
 
-    pub fn inverse(&self) -> Result<Self, &str>{
+    pub fn inverse(&self) -> Result<Self, String>{
         if self.rows != self.columns {
-            return Err("Trying to invert a rectangular matrix")
+            return Err(String::from("Trying to invert a rectangular matrix"));
         }
         let mut data1 = self.data.clone();
         let mut data2 = Self::one(self.ring.clone(),self.rows).data;
@@ -123,7 +123,7 @@ impl<F:Field> Matrix<F> {
                     self.scale_row(&mut data1, &mut data2, i, d_inv);
                 }
                 Err(_) => {
-                    return Err("Trying to invert a non-invertible matrix");
+                    return Err(String::from("Trying to invert a non-invertible matrix"));
                 }
             }
             for j in i+1..self.rows {
@@ -161,10 +161,6 @@ impl<F: Ring> Matrix<F> {
         }
     }
 
-    // pub fn flatten(ring: F, parts: Vec<Vec<Self>>) -> Result<Self, String>{
-    //
-    // }
-
     pub fn one(ring: F, rows:usize) -> Self {
         let mut data = vec![vec![ring.zero(); rows]; rows];
         for i in 0..rows {
@@ -188,9 +184,24 @@ impl<F: Ring> Matrix<F> {
         }
     }
 
-    pub fn add(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, &str> {
+    pub fn scale(&self, scalar:F::RingMember) -> Matrix<F> {
+        let mut ans: Matrix<F> = Matrix {
+            ring: self.ring.clone(),
+            rows: self.rows,
+            columns: self.columns,
+            data: vec![vec![self.ring.zero(); self.columns]; self.rows],
+        };
+        for i in 0..self.rows {
+            for j in 0..self.columns {
+                ans.data[i][j] = self.ring.mul(&self.data[i][j], &scalar);
+            }
+        }
+        ans
+    }
+
+    pub fn add(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, String> {
         if self.rows != rhs.rows || self.columns != rhs.columns {
-            return Result::Err("Illegal matrix operation");
+            return Result::Err(String::from("Illegal matrix operation"));
         } else {
             let mut ans: Matrix<F> = Matrix {
                 ring: self.ring.clone(),
@@ -206,10 +217,29 @@ impl<F: Ring> Matrix<F> {
             Ok(ans)
         }
     }
+
+    pub fn sub(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, String> {
+        if self.rows != rhs.rows || self.columns != rhs.columns {
+            return Result::Err(String::from("Illegal matrix operation"));
+        } else {
+            let mut ans: Matrix<F> = Matrix {
+                ring: self.ring.clone(),
+                rows: self.rows,
+                columns: self.columns,
+                data: vec![vec![self.ring.zero(); self.columns]; self.rows],
+            };
+            for i in 0..self.rows {
+                for j in 0..self.columns {
+                    ans.data[i][j] = self.ring.add(&self.data[i][j], &self.ring.neg(&rhs.data[i][j]));
+                }
+            }
+            Ok(ans)
+        }
+    }
     //vanila matrix multiplication
-    pub fn mul(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, &str> {
+    pub fn mul(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, String> {
         if self.columns != rhs.rows {
-            return Result::Err("Illegal matrix operation");
+            return Result::Err(String::from("Illegal matrix operation"));
         } else {
             let mut ans: Matrix<F> = Matrix {
                 ring: self.ring.clone(),
@@ -247,11 +277,43 @@ impl<F: Ring> Matrix<F> {
      }
 }
 
+//Ops implemetations
+impl <F:Ring> Add<&Matrix<F>> for &Matrix<F> {
+    type Output = Matrix<F>;
+
+    fn add(self, rhs: &Matrix<F>) -> Matrix<F> {
+         self.add(rhs).expect("")
+    }
+}
+
+impl <F:Ring> Sub<&Matrix<F>> for &Matrix<F> {
+    type Output = Matrix<F>;
+
+    fn sub(self, rhs: &Matrix<F>) -> Matrix<F> {
+         self.sub(rhs).expect("")
+    }
+}
+
+impl <F:Ring> Mul<&Matrix<F>> for &Matrix<F> {
+    type Output = Matrix<F>;
+
+    fn mul(self, rhs: &Matrix<F>) -> Matrix<F> {
+         self.mul(rhs).expect("")
+    }
+}
+
+impl <F:Field> Div<&Matrix<F>> for &Matrix<F> {
+    type Output = Matrix<F>;
+
+    fn div(self, rhs: &Matrix<F>) -> Matrix<F> {
+         self.mul(&rhs.inverse().expect("")).expect("")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::field::ModularField;
-use crate::field::F64Field;
-use super::*;
+    use super::*;
     use int_ring::I32Ring;
     #[test]
     fn test_zero() {
@@ -275,7 +337,7 @@ use super::*;
         let lhs: Matrix<I32Ring> = Matrix::new(ring.clone(), vec![vec![1, 2, 5], vec![3, 4, 6]]);
         let rhs: Matrix<I32Ring> = Matrix::new(ring.clone(), vec![vec![2, 3, 7], vec![4, 5, 8]]);
         let exp_res: Matrix<I32Ring> = Matrix::new(ring, vec![vec![3, 5, 12], vec![7, 9, 14]]);
-        let res = lhs.add(&rhs).expect("Error");
+        let res = &lhs+&rhs;
         assert_eq!(exp_res, res);
     }
     #[test]
@@ -284,7 +346,7 @@ use super::*;
         let lhs: Matrix<I32Ring> = Matrix::new(ring.clone(), vec![vec![1, 2, 3], vec![3, 4, 5]]);
         let rhs: Matrix<I32Ring> = Matrix::new(ring.clone(), vec![vec![2, 3], vec![4, 5], vec![1,2]]);
         let exp_res: Matrix<I32Ring> = Matrix::new(ring, vec![vec![13,19], vec![27,39]]);
-        let res = lhs.mul(&rhs).expect("Error");
+        let res = &lhs * &rhs;
         assert_eq!(exp_res, res);
     }
 
