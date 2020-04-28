@@ -28,6 +28,8 @@ pub mod euclidian_domain;
 pub mod int_ring;
 pub mod field;
 
+use num::BigUint;
+
 pub trait Ring: Clone {
     type RingMember: Clone+PartialEq;
     fn add(&self, lhs: &Self::RingMember, rhs: &Self::RingMember) -> Self::RingMember;
@@ -247,7 +249,8 @@ impl<F: Ring> Matrix<F> {
 
 #[cfg(test)]
 mod tests {
-    use crate::field::F64Field;
+    use crate::field::ModularField;
+use crate::field::F64Field;
 use super::*;
     use int_ring::I32Ring;
     #[test]
@@ -304,12 +307,50 @@ use super::*;
     }
 
     #[test]
-    fn test_inverse() {
-        let ring = F64Field;
-        let mat: Matrix<F64Field> = Matrix::new(ring.clone(), vec![vec![1.0, 2.0], vec![2.0, 1.0]]);
+    fn test_inverse_1() {
+        let ring = ModularField::new(BigUint::from(7u64));
+        let one = BigUint::from(1u64);
+        let two = BigUint::from(2u64);
+        let mat: Matrix<ModularField> = Matrix::new(ring.clone(), vec![vec![one.clone(), two.clone()], vec![two, one]]);
         let inv = mat.inverse().expect("");
-        let exp_inv =  Matrix::new(ring.clone(), vec![vec![-1.0/3.0, 2.0/3.0], vec![2.0/3.0, -1.0/3.0]]);
-        assert_eq!(exp_inv, inv);
+        let identity_matrix =  Matrix::<ModularField>::one(ring.clone(), 2);
+        assert_eq!(identity_matrix, inv.mul(&mat).expect(""));
+
+    }
+
+    #[test]
+    fn test_inverse_2() {
+        let ring = ModularField::new(BigUint::from(7u64));
+        let one = BigUint::from(1u64);
+        let two = BigUint::from(2u64);
+        let three = BigUint::from(3u64);
+
+        let mat: Matrix<ModularField> = Matrix::new(ring.clone(), vec![
+        vec![one.clone(), two.clone(), three.clone()],
+        vec![two.clone(), one.clone(), three.clone()],
+        vec![three.clone(), one.clone(), three.clone()]]);
+
+        let inv = mat.inverse().expect("");
+        let identity_matrix =  Matrix::<ModularField>::one(ring.clone(), 3);
+        assert_eq!(identity_matrix, inv.mul(&mat).expect(""));
+
+    }
+
+    #[test]
+    fn test_inverse_3() {
+        let ring = ModularField::new(BigUint::from(7u64));
+        let one = BigUint::from(1u64);
+        let two = BigUint::from(2u64);
+        let three = BigUint::from(3u64);
+
+        let mat: Matrix<ModularField> = Matrix::new(ring.clone(), vec![
+        vec![one.clone(), two.clone(), three.clone()],
+        vec![one.clone(), two.clone(), one.clone()],
+        vec![three.clone(), one.clone(), three.clone()]]);
+
+        let inv = mat.inverse().expect("");
+        let identity_matrix =  Matrix::<ModularField>::one(ring.clone(), 3);
+        assert_eq!(identity_matrix, inv.mul(&mat).expect(""));
 
     }
 }

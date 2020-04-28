@@ -1,12 +1,41 @@
+use num_bigint::BigInt;
 use crate::Field;
 use crate::Ring;
 use num::BigUint;
+use num::ToBigInt;
 use num_complex::Complex;
+use num_integer::Integer;
 #[derive(Clone, PartialEq, Debug)]
 pub struct ModularField {
     modulus: BigUint,
 }
 
+impl ModularField {
+    pub fn new(modulus: BigUint) -> ModularField {
+        ModularField {
+            modulus
+        }
+    }
+}
+
+impl Field for ModularField {
+
+    fn inv(&self, x: &BigUint) -> Result<BigUint, String> {
+        if *x == self.zero() {
+            return Err(String::from(""))
+        }
+        let signed_x:BigInt = x.to_bigint().unwrap();
+        let signed_mod:BigInt = self.modulus.to_bigint().unwrap();
+
+        let ext_gcd = signed_x.extended_gcd(&signed_mod);
+        let mut inv = ext_gcd.x % &signed_mod;
+        if inv < BigInt::from(0i64) {
+            inv = inv + &signed_mod;
+        }
+        Ok(inv.to_biguint().unwrap())
+    }
+    type InvZeroError = String;
+}
 
 impl Ring for ModularField {
     type RingMember = BigUint;
