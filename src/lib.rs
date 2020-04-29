@@ -27,7 +27,6 @@ use core::fmt::Debug;
 pub mod euclidian_domain;
 pub mod int_ring;
 pub mod field;
-use num::BigUint;
 use std::ops::*;
 
 pub trait Ring: Clone {
@@ -315,6 +314,7 @@ mod tests {
     use crate::field::ModularField;
     use super::*;
     use int_ring::I32Ring;
+    use num::BigUint;
     #[test]
     fn test_zero() {
         let ring = I32Ring {};
