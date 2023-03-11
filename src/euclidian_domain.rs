@@ -21,25 +21,28 @@
  * DEALINGS IN THE SOFTWARE.
  */
 use super::Ring;
-pub struct DivisionAlgorithmResult<R:Ring>{
+pub struct DivisionAlgorithmResult<R: Ring> {
     pub quotient: R::RingMember,
     pub remainder: R::RingMember,
 }
 
-pub struct ExtendedEuclidResult<R:Ring>{
+pub struct ExtendedEuclidResult<R: Ring> {
     pub x: R::RingMember,
     pub y: R::RingMember,
-    pub gcd: R::RingMember
+    pub gcd: R::RingMember,
 }
 
-
-pub trait EuclidianDomain: Ring {
+pub trait EuclidianDomain: Ring + Sized {
     fn division_algorithm(
         value: &Self::RingMember,
         divisor: &Self::RingMember,
     ) -> DivisionAlgorithmResult<Self>;
 
-    fn extended_euclid(&self, a:Self::RingMember, b:Self::RingMember) -> ExtendedEuclidResult<Self> {
+    fn extended_euclid(
+        &self,
+        a: Self::RingMember,
+        b: Self::RingMember,
+    ) -> ExtendedEuclidResult<Self> {
         let mut cur = (self.one(), self.zero());
         let mut prev = (self.zero(), self.one());
         let mut cur_divisor = a;
@@ -47,18 +50,20 @@ pub trait EuclidianDomain: Ring {
         loop {
             let div_result = Self::division_algorithm(&cur_dividend, &cur_divisor);
             if div_result.remainder == self.zero() {
-                return ExtendedEuclidResult{
+                return ExtendedEuclidResult {
                     x: cur.0,
                     y: cur.1,
-                    gcd: cur_divisor
-                }
+                    gcd: cur_divisor,
+                };
             }
             cur_dividend = cur_divisor;
             cur_divisor = div_result.remainder;
             let temp = prev;
             prev = cur;
-            cur = (self.add(&temp.0, &self.mul(&prev.0, &self.neg(&div_result.quotient))),
-            self.add(&temp.1, &self.mul(&prev.1, &self.neg(&div_result.quotient))));
+            cur = (
+                self.add(&temp.0, &self.mul(&prev.0, &self.neg(&div_result.quotient))),
+                self.add(&temp.1, &self.mul(&prev.1, &self.neg(&div_result.quotient))),
+            );
         }
     }
 }
