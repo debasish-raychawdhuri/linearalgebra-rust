@@ -23,6 +23,8 @@
 
 use crate::Field;
 use crate::Ring;
+use crate::euclidian_domain::DivisionAlgorithmResult;
+use crate::euclidian_domain::EuclidianDomain;
 use funty::Unsigned;
 use itertools::Itertools;
 use std::cmp::max;
@@ -170,11 +172,12 @@ impl<T: Unsigned> BinaryRing<T> {
         if top_bit > T::ZERO {
             value.push(T::ZERO);
         }
-        for i in (0..value.len()).rev() {
+        let len = value.len();
+        for i in (0..len).rev() {
             let top_bit = value[i] & (T::ONE << (T::BITS - 1));
             value[i] = value[i] << 1;
             if i < value.len() - 1 && top_bit > T::ZERO {
-                value[i + 1] = value[i + 1] & T::ONE;
+                value[i + 1] = value[i + 1] | T::ONE;
             }
         }
     }
@@ -186,6 +189,24 @@ impl<T: Unsigned> BinaryRing<T> {
         for i in 0..rhs.len() {
             value[i] ^= rhs[i];
         }
+    }
+    pub fn clean_up(value: &mut Vec<T>){
+        let len = value.len();
+        for i in (0..len).rev() {
+            if value[i]!=T::ZERO {
+                break;
+            }
+            value.pop();
+        }
+    }
+}
+
+impl <T:Unsigned>  EuclidianDomain for BinaryRing<T>{
+    fn division_algorithm(
+        value: &Self::RingMember,
+        divisor: &Self::RingMember,
+    ) -> DivisionAlgorithmResult<Self> {
+        todo!()
     }
 }
 
@@ -310,7 +331,7 @@ impl<T: Unsigned> Field for BinaryField<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::BitIterator;
+    use super::{BitIterator, BinaryRing};
 
     #[test]
     fn test_bit_iterator(){
@@ -326,5 +347,29 @@ mod tests {
             assert_eq!(iter.next().unwrap(),true);
         }
         assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_shif_left(){
+        let mut value = vec![0x0fu8, 0xffu8];
+        BinaryRing::shift_left(&mut value);
+        assert_eq!(value[0], 0x1e);
+        assert_eq!(value[1], 0xfe);
+        assert_eq!(value[2], 0x01);
+    }
+
+    #[test]
+    fn test_add_in_place(){
+        let mut value = vec![0x0fu8, 0xffu8];
+        BinaryRing::add_in_place(&mut value, &vec![0x0fu8]);
+        assert_eq!(value[0],0);
+        assert_eq!(value[1],0xffu8);
+        assert_eq!(value.len(),2);
+        BinaryRing::add_in_place(&mut value, &vec![0x0fu8,0xffu8, 0x12u8]);
+        assert_eq!(value[0],0x0fu8);
+        assert_eq!(value[1],0x00u8);
+        assert_eq!(value[2],0x12u8);
+        assert_eq!(value.len(),3);
+
     }
 }
