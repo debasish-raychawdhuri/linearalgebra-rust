@@ -24,6 +24,7 @@
 extern crate num_bigint as num;
 use core::fmt::Debug;
 
+pub mod binary;
 pub mod euclidian_domain;
 pub mod field;
 pub mod int_ring;
@@ -337,7 +338,7 @@ impl<'a, F: Field> Div<&Matrix<'a, F>> for &'a Matrix<'a, F> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{field::ModularField};
+    use crate::field::ModularField;
     use int_ring::I32Ring;
     use num::BigUint;
     #[test]
@@ -455,5 +456,4 @@ mod tests {
         let identity_matrix = Matrix::<ModularField>::one(&ring, 3);
         assert_eq!(identity_matrix, inv.mul(&mat).expect(""));
     }
-   
 }
