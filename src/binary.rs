@@ -1,4 +1,4 @@
-use std::cmp::max;
+use std::{cmp::max, vec};
 
 use funty::Unsigned;
 
@@ -50,7 +50,40 @@ impl<'a, T: Unsigned> Iterator for BitIterator<'a, T> {
     }
 }
 
+fn bit_length<T: Unsigned>(value: T) -> u32 {
+    let mut mask = T::ONE << (T::BITS - 1);
+    for i in (1..=T::BITS).rev() {
+        if mask & value != T::ZERO {
+            return i;
+        }
+        mask >>= 1;
+    }
+    0
+}
+
 impl<T: Unsigned> BinaryRing<T> {
+    pub fn shift_left_by_bits(value: &mut Vec<T>, bits: u32) {
+        let num_of_units_moved = (bits / T::BITS) as usize;
+        let bits_within_unit = bits % T::BITS;
+        let orig_len = value.len();
+        let bits_in_most_sig_unit = bit_length(value[value.len() - 1]);
+        if bits_within_unit + bits_in_most_sig_unit <= T::BITS {
+            value.resize(value.len() + num_of_units_moved as usize, T::ZERO);
+        } else {
+            value.resize(value.len() + num_of_units_moved as usize + 1, T::ZERO);
+        }
+        let cut_mask = ((T::ONE << bits_within_unit) - T::ONE) << (T::BITS - bits_within_unit);
+        for i in (0..orig_len).rev() {
+            let cut_val = value[i] & cut_mask;
+            value[i + num_of_units_moved] = value[i] << bits_within_unit;
+            if i + num_of_units_moved < value.len() - 1 {
+                value[i + num_of_units_moved + 1] |= cut_val >> (T::BITS - bits_within_unit)
+            }
+        }
+        for i in 0..num_of_units_moved {
+            value[i] = T::ZERO;
+        }
+    }
     pub fn shift_left(value: &mut Vec<T>) {
         let top_bit = value[value.len() - 1] & (T::ONE << (T::BITS - 1));
         if top_bit > T::ZERO {
@@ -64,6 +97,43 @@ impl<T: Unsigned> BinaryRing<T> {
                 value[i + 1] = value[i + 1] | T::ONE;
             }
         }
+    }
+    pub fn shift_right(value: &mut Vec<T>) {
+        for i in 0..value.len() {
+            value[i] >>= 1;
+            if i < value.len() - 1 {
+                let v = value[i + 1];
+                value[i] |= (v & T::ONE) >> (T::BITS - 1);
+            }
+        }
+    }
+    pub fn bit_at(&self, value: &[T], bit: usize) -> bool {
+        let num_of_units = bit / T::BITS as usize;
+        let num_of_bits_in_unit = bit % T::BITS as usize;
+        let mask = T::ONE << num_of_bits_in_unit;
+        value[num_of_units] & mask != T::ZERO
+    }
+
+    pub fn degree(&self, value: &Vec<T>) -> u32 {
+        let len = value.len();
+        let mut clen = 0;
+        for i in (0..len).rev() {
+            if value[i] != T::ZERO {
+                clen = i;
+                break;
+            }
+        }
+
+        let mut mask = T::ONE << (T::BITS - 1);
+        let mut bits_in_unit = 0;
+        for i in (0..T::BITS).rev() {
+            if value[clen] & mask != T::ZERO {
+                bits_in_unit = i;
+                break;
+            }
+            mask >>= 1;
+        }
+        clen as u32 * T::BITS + bits_in_unit
     }
 
     pub fn add_in_place(value: &mut Vec<T>, rhs: &[T]) {
@@ -87,9 +157,31 @@ impl<T: Unsigned> BinaryRing<T> {
 
 impl<T: Unsigned> EuclidianDomain for BinaryRing<T> {
     fn division_algorithm(
+        &self,
         value: &Self::RingMember,
         divisor: &Self::RingMember,
     ) -> DivisionAlgorithmResult<Self> {
+        let v_deg = self.degree(value);
+        let d_deg: u32 = self.degree(divisor);
+        let mut value = value.clone();
+        if v_deg < d_deg {
+            return DivisionAlgorithmResult {
+                quotient: vec![],
+                remainder: value,
+            };
+        } else {
+            let mut substractor = divisor.clone();
+            Self::shift_left_by_bits(&mut substractor, v_deg - d_deg);
+            let mut mask = vec![T::ONE];
+            BinaryRing::shift_left_by_bits(&mut mask, v_deg);
+            for i in (d_deg..=v_deg).rev() {
+                if self.bit_at(&value, i as usize) {
+                    BinaryRing::add_in_place(&mut value, &substractor);
+                }
+                BinaryRing::shift_right(&mut substractor);
+            }
+        }
+
         todo!()
     }
 }
@@ -265,5 +357,21 @@ mod tests {
         assert_eq!(result[0], 0x55);
         assert_eq!(result[1], 0x05);
         assert_eq!(result[2], 0x05);
+    }
+    #[test]
+    fn test_binary_ring_deg() {
+        let v1 = vec![0x0fu8, 0x4fu8];
+        let ring = BinaryRing { _type_flag: 0u8 };
+        assert_eq!(ring.degree(&v1), 14);
+    }
+    #[test]
+    fn test_shift_by_bits() {
+        let mut vi = vec![0x2f, 0x1fu8];
+
+        BinaryRing::shift_left_by_bits(&mut vi, 12);
+        assert_eq!(vi[0], 0x00);
+        assert_eq!(vi[1], 0xf0);
+        assert_eq!(vi[2], 0xf2);
+        assert_eq!(vi[3], 0x01);
     }
 }

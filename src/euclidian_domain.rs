@@ -34,6 +34,7 @@ pub struct ExtendedEuclidResult<R: Ring> {
 
 pub trait EuclidianDomain: Ring + Sized {
     fn division_algorithm(
+        &self,
         value: &Self::RingMember,
         divisor: &Self::RingMember,
     ) -> DivisionAlgorithmResult<Self>;
@@ -48,7 +49,7 @@ pub trait EuclidianDomain: Ring + Sized {
         let mut cur_divisor = a;
         let mut cur_dividend = b;
         loop {
-            let div_result = Self::division_algorithm(&cur_dividend, &cur_divisor);
+            let div_result = self.division_algorithm(&cur_dividend, &cur_divisor);
             if div_result.remainder == self.zero() {
                 return ExtendedEuclidResult {
                     x: cur.0,

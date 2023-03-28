@@ -20,11 +20,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-use num_bigint::BigInt;
 use crate::Field;
 use crate::Ring;
 use num::BigUint;
 use num::ToBigInt;
+use num_bigint::BigInt;
 use num_complex::Complex;
 use num_integer::Integer;
 #[derive(Clone, PartialEq, Debug)]
@@ -34,20 +34,17 @@ pub struct ModularField {
 
 impl ModularField {
     pub fn new(modulus: BigUint) -> ModularField {
-        ModularField {
-            modulus
-        }
+        ModularField { modulus }
     }
 }
 
 impl Field for ModularField {
-
     fn inv(&self, x: &BigUint) -> Result<BigUint, String> {
         if *x == self.zero() {
-            return Err(String::from(""))
+            return Err(String::from(""));
         }
-        let signed_x:BigInt = x.to_bigint().unwrap();
-        let signed_mod:BigInt = self.modulus.to_bigint().unwrap();
+        let signed_x: BigInt = x.to_bigint().unwrap();
+        let signed_mod: BigInt = self.modulus.to_bigint().unwrap();
 
         let ext_gcd = signed_x.extended_gcd(&signed_mod);
         let mut inv = ext_gcd.x % &signed_mod;
@@ -79,49 +76,67 @@ impl Ring for ModularField {
     }
 }
 
-
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct F64Field;
 
 impl Ring for F64Field {
     type RingMember = f64;
-    fn mul(&self, x: &f64, y: &f64) -> f64{x*y}
-    fn add(&self, x: &f64, y: &f64) -> f64 { x+y}
-    fn one(&self) -> f64 { 1f64 }
-    fn zero(&self) -> f64 { 0f64 }
-    fn neg(&self, x: &f64) -> f64 { -x }
+    fn mul(&self, x: &f64, y: &f64) -> f64 {
+        x * y
+    }
+    fn add(&self, x: &f64, y: &f64) -> f64 {
+        x + y
+    }
+    fn one(&self) -> f64 {
+        1f64
+    }
+    fn zero(&self) -> f64 {
+        0f64
+    }
+    fn neg(&self, x: &f64) -> f64 {
+        -x
+    }
 }
 
-impl  Field for F64Field {
+impl Field for F64Field {
     fn inv(&self, x: &f64) -> Result<f64, String> {
         if *x == 0f64 {
             Err(String::from("Division by zero"))
-        }else {
-            Ok (self.one() / x)
+        } else {
+            Ok(self.one() / x)
         }
     }
     type InvZeroError = String;
 }
-
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct ComplexField;
 impl Ring for ComplexField {
     type RingMember = Complex<f64>;
 
-    fn mul(&self, x: &Complex<f64>, y: &Complex<f64>) -> Complex<f64>{x*y}
-    fn add(&self, x: &Complex<f64>, y: &Complex<f64>) -> Complex<f64> { x+y}
-    fn one(&self) ->Complex<f64> { Complex::<f64>::new(1f64,0f64) }
-    fn zero(&self) -> Complex<f64> { Complex::<f64>::new(0f64,0f64) }
-    fn neg(&self, x: &Complex<f64>) -> Complex<f64> { -x }
+    fn mul(&self, x: &Complex<f64>, y: &Complex<f64>) -> Complex<f64> {
+        x * y
+    }
+    fn add(&self, x: &Complex<f64>, y: &Complex<f64>) -> Complex<f64> {
+        x + y
+    }
+    fn one(&self) -> Complex<f64> {
+        Complex::<f64>::new(1f64, 0f64)
+    }
+    fn zero(&self) -> Complex<f64> {
+        Complex::<f64>::new(0f64, 0f64)
+    }
+    fn neg(&self, x: &Complex<f64>) -> Complex<f64> {
+        -x
+    }
 }
 
-impl  Field for ComplexField {
+impl Field for ComplexField {
     fn inv(&self, x: &Complex<f64>) -> Result<Complex<f64>, String> {
         if x.re == 0f64 && x.im == 0f64 {
             Err(String::from("Division by zero"))
-        }else {
-            Ok (self.one() / x)
+        } else {
+            Ok(self.one() / x)
         }
     }
     type InvZeroError = String;
