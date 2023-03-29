@@ -1,6 +1,7 @@
 use std::{cmp::max, vec};
 
 use funty::Unsigned;
+use proptest::prelude::*;
 
 use crate::{
     euclidian_domain::{DivisionAlgorithmResult, EuclidianDomain},
@@ -63,6 +64,9 @@ fn bit_length<T: Unsigned>(value: T) -> u32 {
 
 impl<T: Unsigned> BinaryRing<T> {
     pub fn shift_left_by_bits(value: &mut Vec<T>, bits: u32) {
+        if value.len() == 0 {
+            return;
+        }
         let num_of_units_moved = (bits / T::BITS) as usize;
         let bits_within_unit = bits % T::BITS;
         let orig_len = value.len();
@@ -72,12 +76,14 @@ impl<T: Unsigned> BinaryRing<T> {
         } else {
             value.resize(value.len() + num_of_units_moved as usize + 1, T::ZERO);
         }
-        let cut_mask = ((T::ONE << bits_within_unit) - T::ONE) << (T::BITS - bits_within_unit);
+        let cut_mask =
+            ((T::ONE << bits_within_unit) - T::ONE) << ((T::BITS - bits_within_unit) % T::BITS);
         for i in (0..orig_len).rev() {
             let cut_val = value[i] & cut_mask;
             value[i + num_of_units_moved] = value[i] << bits_within_unit;
             if i + num_of_units_moved < value.len() - 1 {
-                value[i + num_of_units_moved + 1] |= cut_val >> (T::BITS - bits_within_unit)
+                value[i + num_of_units_moved + 1] |=
+                    cut_val >> ((T::BITS - bits_within_unit) % T::BITS);
             }
         }
         for i in 0..num_of_units_moved {
@@ -85,6 +91,9 @@ impl<T: Unsigned> BinaryRing<T> {
         }
     }
     pub fn shift_left(value: &mut Vec<T>) {
+        if value.len() == 0 {
+            return;
+        }
         let top_bit = value[value.len() - 1] & (T::ONE << (T::BITS - 1));
         if top_bit > T::ZERO {
             value.push(T::ZERO);
@@ -103,7 +112,7 @@ impl<T: Unsigned> BinaryRing<T> {
             value[i] >>= 1;
             if i < value.len() - 1 {
                 let v = value[i + 1];
-                value[i] |= (v & T::ONE) >> (T::BITS - 1);
+                value[i] |= (v & T::ONE) << (T::BITS - 1);
             }
         }
     }
@@ -374,4 +383,32 @@ mod tests {
         assert_eq!(vi[2], 0xf2);
         assert_eq!(vi[3], 0x01);
     }
+}
+
+proptest! {
+    #[test]
+    fn test_shifts(v:Vec<u8>) {
+        let mut w=v.clone();
+        let mut u=v.clone();
+        BinaryRing::clean_up(&mut u);
+        BinaryRing::shift_left(&mut w);
+        BinaryRing::shift_right(&mut w);
+
+        BinaryRing::clean_up(&mut w);
+        assert_eq!(u,w);
+    }
+    #[test]
+    fn test_shifts_long(v:Vec<u8>, count in 0..32u32) {
+        let mut w=v.clone();
+        let mut u=v.clone();
+        BinaryRing::clean_up(&mut u);
+        BinaryRing::shift_left_by_bits(&mut w, count);
+        for _ in 0..count{
+            BinaryRing::shift_right(&mut w);
+        }
+
+        BinaryRing::clean_up(&mut w);
+        assert_eq!(u,w);
+    }
+
 }
