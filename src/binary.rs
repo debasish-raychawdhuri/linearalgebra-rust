@@ -177,7 +177,7 @@ impl<T: Unsigned> EuclidianDomain for BinaryRing<T> {
         &self,
         value: &Self::RingMember,
         divisor: &Self::RingMember,
-    ) -> DivisionAlgorithmResult<Self> {
+    ) -> DivisionAlgorithmResult<Self::RingMember> {
         let v_deg = self.degree(value);
         let d_deg: u32 = self.degree(divisor);
         let mut value = value.clone();

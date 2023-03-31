@@ -21,15 +21,16 @@
  * DEALINGS IN THE SOFTWARE.
  */
 use super::Ring;
-pub struct DivisionAlgorithmResult<R: Ring> {
-    pub quotient: R::RingMember,
-    pub remainder: R::RingMember,
+use proptest::prelude::*;
+pub struct DivisionAlgorithmResult<R> {
+    pub quotient: R,
+    pub remainder: R,
 }
 
-pub struct ExtendedEuclidResult<R: Ring> {
-    pub x: R::RingMember,
-    pub y: R::RingMember,
-    pub gcd: R::RingMember,
+pub struct ExtendedEuclidResult<R> {
+    pub x: R,
+    pub y: R,
+    pub gcd: R,
 }
 
 pub trait EuclidianDomain: Ring + Sized {
@@ -37,13 +38,13 @@ pub trait EuclidianDomain: Ring + Sized {
         &self,
         value: &Self::RingMember,
         divisor: &Self::RingMember,
-    ) -> DivisionAlgorithmResult<Self>;
+    ) -> DivisionAlgorithmResult<Self::RingMember>;
 
     fn extended_euclid(
         &self,
         a: Self::RingMember,
         b: Self::RingMember,
-    ) -> ExtendedEuclidResult<Self> {
+    ) -> ExtendedEuclidResult<Self::RingMember> {
         let mut cur = (self.one(), self.zero());
         let mut prev = (self.zero(), self.one());
         let mut cur_divisor = a;
@@ -66,5 +67,15 @@ pub trait EuclidianDomain: Ring + Sized {
                 self.add(&temp.1, &self.mul(&prev.1, &self.neg(&div_result.quotient))),
             );
         }
+    }
+}
+
+//impl EuclidianDomain for
+
+proptest! {
+
+    #[test]
+    fn euclid_test(a:u32, b:u32){
+        //let eres =
     }
 }
