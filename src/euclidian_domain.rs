@@ -33,7 +33,7 @@ pub struct ExtendedEuclidResult<R> {
     pub gcd: R,
 }
 
-pub trait EuclidianDomain: Ring + Sized {
+pub trait EuclidianDomain: Ring {
     fn division_algorithm(
         &self,
         value: &Self::RingMember,
@@ -69,8 +69,6 @@ pub trait EuclidianDomain: Ring + Sized {
         }
     }
 }
-
-//impl EuclidianDomain for
 
 proptest! {
 

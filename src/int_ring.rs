@@ -23,10 +23,14 @@
 
 use crate::euclidian_domain::DivisionAlgorithmResult;
 use crate::euclidian_domain::EuclidianDomain;
+use crate::euclidian_domain::ExtendedEuclidResult;
 use crate::Field;
 use crate::Ring;
 
 use itertools::Itertools;
+use num_bigint::BigInt;
+use num_bigint::BigUint;
+use proptest::prelude::*;
 use std::cmp::max;
 use std::fmt::Debug;
 use std::ops::BitXor;
@@ -36,6 +40,8 @@ pub struct I32Ring;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct I64Ring;
+#[derive(Clone, PartialEq, Debug)]
+pub struct BigIntRing;
 
 impl Ring for I32Ring {
     type RingMember = i32;
@@ -56,7 +62,41 @@ impl Ring for I32Ring {
         1i32
     }
 }
+impl Ring for BigIntRing {
+    type RingMember = BigInt;
 
+    fn add(&self, lhs: &Self::RingMember, rhs: &Self::RingMember) -> Self::RingMember {
+        lhs + rhs
+    }
+
+    fn mul(&self, lhs: &Self::RingMember, rhs: &Self::RingMember) -> Self::RingMember {
+        lhs * rhs
+    }
+
+    fn neg(&self, lhs: &Self::RingMember) -> Self::RingMember {
+        -lhs
+    }
+
+    fn zero(&self) -> Self::RingMember {
+        BigInt::from(0u32)
+    }
+
+    fn one(&self) -> Self::RingMember {
+        BigInt::from(1u32)
+    }
+}
+impl EuclidianDomain for BigIntRing {
+    fn division_algorithm(
+        &self,
+        value: &Self::RingMember,
+        divisor: &Self::RingMember,
+    ) -> DivisionAlgorithmResult<Self::RingMember> {
+        DivisionAlgorithmResult {
+            quotient: value / divisor,
+            remainder: value % divisor,
+        }
+    }
+}
 impl Ring for I64Ring {
     type RingMember = i64;
 
@@ -118,5 +158,21 @@ impl<'a, T: Field + PartialEq + Clone> Ring for PolynomialRing<'a, T> {
 
     fn one(&self) -> Self::RingMember {
         todo!()
+    }
+}
+
+proptest! {
+    #[test]
+    fn test_euclid(a:u32, b:u32){
+        if a!=0 && b!=0{
+            let a = BigInt::from(a);
+            let b = BigInt::from(b);
+            let ring = BigIntRing;
+            let eres = ring.extended_euclid(a.clone(),b.clone());
+            let gcd = eres.gcd;
+            assert_eq!(a.clone() % gcd.clone(), ring.zero());
+            assert_eq!(b.clone() % gcd.clone(), ring.zero());
+            assert_eq!(eres.x * a+eres.y*b,gcd);
+        }
     }
 }
