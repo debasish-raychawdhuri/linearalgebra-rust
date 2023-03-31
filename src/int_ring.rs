@@ -168,7 +168,7 @@ proptest! {
             let a = BigInt::from(a);
             let b = BigInt::from(b);
             let ring = BigIntRing;
-            let eres = ring.extended_euclid(a.clone(),b.clone());
+            let eres = ring.extended_euclid(&a,&b);
             let gcd = eres.gcd;
             assert_eq!(a.clone() % gcd.clone(), ring.zero());
             assert_eq!(b.clone() % gcd.clone(), ring.zero());

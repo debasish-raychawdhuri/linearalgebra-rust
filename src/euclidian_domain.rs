@@ -42,13 +42,13 @@ pub trait EuclidianDomain: Ring {
 
     fn extended_euclid(
         &self,
-        a: Self::RingMember,
-        b: Self::RingMember,
+        a: &Self::RingMember,
+        b: &Self::RingMember,
     ) -> ExtendedEuclidResult<Self::RingMember> {
         let mut cur = (self.one(), self.zero());
         let mut prev = (self.zero(), self.one());
-        let mut cur_divisor = a;
-        let mut cur_dividend = b;
+        let mut cur_divisor = self.add(a, &self.zero());
+        let mut cur_dividend = self.add(b, &self.zero());
         loop {
             let div_result = self.division_algorithm(&cur_dividend, &cur_divisor);
             if div_result.remainder == self.zero() {
@@ -67,13 +67,5 @@ pub trait EuclidianDomain: Ring {
                 self.add(&temp.1, &self.mul(&prev.1, &self.neg(&div_result.quotient))),
             );
         }
-    }
-}
-
-proptest! {
-
-    #[test]
-    fn euclid_test(a:u32, b:u32){
-        //let eres =
     }
 }
