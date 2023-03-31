@@ -383,7 +383,6 @@ mod tests {
         let res = &lhs * &rhs;
         assert_eq!(exp_res, res);
     }
-
     fn adder<'a>(ring: &'a I32Ring) -> Matrix<'a, I32Ring> {
         let lhs: Matrix<I32Ring> = Matrix::new(ring, vec![vec![1, 2, 5], vec![3, 4, 6]]);
         let rhs: Matrix<I32Ring> = Matrix::new(ring, vec![vec![2, 3, 7], vec![4, 5, 8]]);

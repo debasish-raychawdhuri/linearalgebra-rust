@@ -21,7 +21,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 use super::Ring;
-use proptest::prelude::*;
 pub struct DivisionAlgorithmResult<R> {
     pub quotient: R,
     pub remainder: R,

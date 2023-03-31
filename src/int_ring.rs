@@ -23,17 +23,12 @@
 
 use crate::euclidian_domain::DivisionAlgorithmResult;
 use crate::euclidian_domain::EuclidianDomain;
-use crate::euclidian_domain::ExtendedEuclidResult;
 use crate::Field;
 use crate::Ring;
 
-use itertools::Itertools;
 use num_bigint::BigInt;
-use num_bigint::BigUint;
 use proptest::prelude::*;
-use std::cmp::max;
 use std::fmt::Debug;
-use std::ops::BitXor;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct I32Ring;

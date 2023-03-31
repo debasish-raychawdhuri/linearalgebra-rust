@@ -95,6 +95,7 @@ impl<T: Unsigned> BinaryRing<T> {
             value[i] = T::ZERO;
         }
     }
+
     pub fn shift_left(value: &mut Vec<T>) {
         if value.len() == 0 {
             return;
@@ -198,6 +199,9 @@ impl<T: Unsigned> EuclidianDomain for BinaryRing<T> {
                 }
                 BinaryRing::shift_right(&mut substractor);
             }
+
+            Self::clean_up(&mut result);
+            Self::clean_up(&mut value);
             return DivisionAlgorithmResult {
                 quotient: result,
                 remainder: value,
@@ -218,6 +222,7 @@ impl<T: Unsigned> Ring for BinaryRing<T> {
             let right_val = if i < right_size { rhs[i] } else { T::ZERO };
             result.push(left_val ^ right_val);
         }
+        Self::clean_up(&mut result);
         result
     }
 
@@ -233,6 +238,7 @@ impl<T: Unsigned> Ring for BinaryRing<T> {
                 Self::add_in_place(&mut result, rhs);
             }
         });
+        Self::clean_up(&mut result);
         result
     }
 
@@ -241,7 +247,7 @@ impl<T: Unsigned> Ring for BinaryRing<T> {
     }
 
     fn zero(&self) -> Self::RingMember {
-        vec![T::ZERO]
+        vec![]
     }
 
     fn one(&self) -> Self::RingMember {
@@ -251,33 +257,51 @@ impl<T: Unsigned> Ring for BinaryRing<T> {
 
 pub struct BinaryField<T: Unsigned> {
     _mod_substractor: T,
+    binary_ring: BinaryRing<T>,
 }
 impl<T: Unsigned> BinaryField<T> {
     pub fn new() -> Self {
         let _mod_substractor = T::ZERO;
+        let binary_ring = BinaryRing::new();
         if T::BITS == 8 {
             if let Ok(_mod_substractor) = T::try_from(0b11011) {
-                return BinaryField { _mod_substractor };
+                return BinaryField {
+                    _mod_substractor,
+                    binary_ring,
+                };
             }
         } else if T::BITS == 16 {
             if let Ok(_mod_substractor) = T::try_from(0b101011) {
-                return BinaryField { _mod_substractor };
+                return BinaryField {
+                    _mod_substractor,
+                    binary_ring,
+                };
             }
         } else if T::BITS == 32 {
             if let Ok(_mod_substractor) = T::try_from(0b10001101) {
-                return BinaryField { _mod_substractor };
+                return BinaryField {
+                    _mod_substractor,
+                    binary_ring,
+                };
             }
         } else if T::BITS == 64 {
             if let Ok(_mod_substractor) = T::try_from(0b11011) {
-                return BinaryField { _mod_substractor };
+                return BinaryField {
+                    _mod_substractor,
+                    binary_ring,
+                };
             }
         } else if T::BITS == 128 {
             if let Ok(_mod_substractor) = T::try_from(0b10000111) {
-                return BinaryField { _mod_substractor };
+                return BinaryField {
+                    _mod_substractor,
+                    binary_ring,
+                };
             }
         }
         return BinaryField {
             _mod_substractor: T::ZERO,
+            binary_ring,
         };
     }
 }
@@ -320,10 +344,16 @@ impl<T: Unsigned> Ring for BinaryField<T> {
 }
 
 impl<T: Unsigned> Field for BinaryField<T> {
-    type InvZeroError = String;
+    type InvZeroError = &'static str;
 
     fn inv(&self, value: &Self::RingMember) -> Result<Self::RingMember, Self::InvZeroError> {
-        todo!()
+        if *value == T::ZERO {
+            return Err("Attempt to divide by zero");
+        }
+        let modulus = vec![self._mod_substractor, T::ONE];
+        let euclid_res = self.binary_ring.extended_euclid(&vec![*value], &modulus);
+        let div_res = self.binary_ring.division_algorithm(&euclid_res.x, &modulus);
+        Ok(div_res.remainder[0])
     }
 }
 
@@ -442,6 +472,15 @@ proptest! {
             let mut mul_result = ring.add(&ring.mul(&div_result.quotient, &a), &div_result.remainder);
             BinaryRing::clean_up(&mut mul_result);
             assert_eq!(b, mul_result);
+        }
+    }
+    #[test]
+    fn test_field_inverse(a:u8){
+        if a != 0 {
+            let field = BinaryField::new();
+            let inv = field.inv(&a).unwrap();
+            let prod = field.mul(&a,&inv);
+            assert_eq!(prod, 1);
         }
     }
 }
