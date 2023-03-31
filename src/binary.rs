@@ -63,6 +63,11 @@ fn bit_length<T: Unsigned>(value: T) -> u32 {
 }
 
 impl<T: Unsigned> BinaryRing<T> {
+    pub fn new() -> Self {
+        BinaryRing {
+            _type_flag: T::ZERO,
+        }
+    }
     pub fn shift_left_by_bits(value: &mut Vec<T>, bits: u32) {
         if value.len() == 0 {
             return;
@@ -125,6 +130,9 @@ impl<T: Unsigned> BinaryRing<T> {
 
     pub fn degree(&self, value: &Vec<T>) -> u32 {
         let len = value.len();
+        if len == 0 {
+            return 0;
+        }
         let mut clen = 0;
         for i in (0..len).rev() {
             if value[i] != T::ZERO {
@@ -181,17 +189,20 @@ impl<T: Unsigned> EuclidianDomain for BinaryRing<T> {
         } else {
             let mut substractor = divisor.clone();
             Self::shift_left_by_bits(&mut substractor, v_deg - d_deg);
-            let mut mask = vec![T::ONE];
-            BinaryRing::shift_left_by_bits(&mut mask, v_deg);
+            let mut result = vec![T::ZERO];
             for i in (d_deg..=v_deg).rev() {
+                BinaryRing::shift_left(&mut result);
                 if self.bit_at(&value, i as usize) {
                     BinaryRing::add_in_place(&mut value, &substractor);
+                    BinaryRing::add_in_place(&mut result, &vec![T::ONE]);
                 }
                 BinaryRing::shift_right(&mut substractor);
             }
+            return DivisionAlgorithmResult {
+                quotient: result,
+                remainder: value,
+            };
         }
-
-        todo!()
     }
 }
 
@@ -211,6 +222,9 @@ impl<T: Unsigned> Ring for BinaryRing<T> {
     }
 
     fn mul(&self, lhs: &Self::RingMember, rhs: &Self::RingMember) -> Self::RingMember {
+        if lhs.len() == 0 || rhs.len() == 0 {
+            return vec![];
+        }
         let left_iter = BitIterator::new(lhs);
         let mut result = vec![T::ZERO];
         left_iter.for_each(|bit| {
@@ -386,6 +400,7 @@ mod tests {
 }
 
 proptest! {
+
     #[test]
     fn test_shifts(v:Vec<u8>) {
         let mut w=v.clone();
@@ -410,5 +425,23 @@ proptest! {
         BinaryRing::clean_up(&mut w);
         assert_eq!(u,w);
     }
-
+    #[test]
+    fn test_mul_div(a:Vec<u8>,b:Vec<u8>){
+        let mut a = a.clone();
+        let mut b = b.clone();
+        BinaryRing::clean_up(&mut a);
+        BinaryRing::clean_up(&mut b);
+        if b.len()!=0 {
+           if a.len() > b.len() {
+                let c = a;
+                a=b;
+                b=c;
+            }
+            let ring = BinaryRing::new();
+            let div_result = ring.division_algorithm(&b,&a);
+            let mut mul_result = ring.add(&ring.mul(&div_result.quotient, &a), &div_result.remainder);
+            BinaryRing::clean_up(&mut mul_result);
+            assert_eq!(b, mul_result);
+        }
+    }
 }
