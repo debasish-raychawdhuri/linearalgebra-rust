@@ -4,7 +4,7 @@ use funty::Unsigned;
 use proptest::prelude::*;
 
 use crate::{
-    euclidian_domain::{DivisionAlgorithmResult, EuclidianDomain},
+    euclidian_domain::{DivisionAlgorithmResult, EuclidianDomain, ExtendedEuclidResult},
     Field, Ring,
 };
 pub struct BinaryRing<T: Unsigned> {
@@ -304,6 +304,109 @@ impl<T: Unsigned> BinaryField<T> {
             binary_ring,
         };
     }
+    fn degree(value: &T) -> u32 {
+        let mut mask = T::ONE << (T::BITS - 1);
+        let mut deg = 0;
+        for i in (0..T::BITS).rev() {
+            let bit_set = ((*value & mask) != T::ZERO && deg == 0) as u32;
+            deg = bit_set * i + (1 - bit_set) * deg;
+            mask >>= 1;
+        }
+        deg
+    }
+    fn bit_at(&self, value: &T, index: u32) -> bool {
+        let mask = T::ONE << index;
+        *value & mask != T::ZERO
+    }
+    fn divide_modulus_by_divisor(&self, divisor: T) -> DivisionAlgorithmResult<T> {
+        let v_deg = T::BITS;
+        let d_deg: u32 = Self::degree(&divisor);
+        let mut value = self._mod_substractor;
+        let mut substractor = divisor;
+
+        substractor <<= (v_deg - d_deg - 1) as usize;
+
+        value = value ^ ((substractor & ((T::MAX ^ T::ONE) >> 1)) << 1);
+
+        let mut result = T::ONE;
+        for i in (d_deg..v_deg).rev() {
+            result <<= 1;
+            if self.bit_at(&value, i) {
+                value = value ^ substractor;
+                result = result ^ T::ONE;
+            }
+            substractor >>= 1;
+        }
+
+        return DivisionAlgorithmResult {
+            quotient: result,
+            remainder: value,
+        };
+    }
+    fn division_algorithm(&self, value: &T, divisor: &T) -> DivisionAlgorithmResult<T> {
+        let v_deg = Self::degree(&value);
+        let d_deg: u32 = Self::degree(&divisor);
+        let mut value = *value;
+        if v_deg < d_deg {
+            return DivisionAlgorithmResult {
+                quotient: T::ZERO,
+                remainder: value,
+            };
+        } else {
+            let mut substractor = *divisor;
+            substractor <<= (v_deg - d_deg) as usize;
+            let mut result = T::ZERO;
+            for i in (d_deg..=v_deg).rev() {
+                result <<= 1;
+                if self.bit_at(&value, i) {
+                    value = value ^ substractor;
+                    result = result ^ T::ONE;
+                }
+                substractor >>= 1;
+            }
+
+            return DivisionAlgorithmResult {
+                quotient: result,
+                remainder: value,
+            };
+        }
+    }
+    fn extended_euclid_inv(&self, a: &T) -> T {
+        if *a == T::ONE {
+            return T::ONE;
+        }
+
+        let mut cur = (self.one(), self.zero());
+        let mut prev = (self.zero(), self.one());
+        let mut cur_divisor = self.add(a, &self.zero());
+        let mut cur_dividend = self.add(&a, &self.zero());
+
+        let div_result = self.divide_modulus_by_divisor(cur_divisor);
+        cur_dividend = cur_divisor;
+        cur_divisor = div_result.remainder;
+        let temp = prev;
+        prev = cur;
+        cur = (
+            self.add(&temp.0, &self.mul(&prev.0, &self.neg(&div_result.quotient))),
+            self.add(&temp.1, &self.mul(&prev.1, &self.neg(&div_result.quotient))),
+        );
+
+        loop {
+            let div_result = self.division_algorithm(&cur_dividend, &cur_divisor);
+            if div_result.remainder == T::ZERO {
+                return cur.0;
+            }
+
+            cur_dividend = cur_divisor;
+            cur_divisor = div_result.remainder;
+            let temp = prev;
+            prev = cur;
+            cur = (
+                self.add(&temp.0, &self.mul(&prev.0, &self.neg(&div_result.quotient))),
+                self.add(&temp.1, &self.mul(&prev.1, &self.neg(&div_result.quotient))),
+            );
+        }
+    }
 }
 
 impl<T: Unsigned> Ring for BinaryField<T> {
@@ -350,10 +453,7 @@ impl<T: Unsigned> Field for BinaryField<T> {
         if *value == T::ZERO {
             return Err("Attempt to divide by zero");
         }
-        let modulus = vec![self._mod_substractor, T::ONE];
-        let euclid_res = self.binary_ring.extended_euclid(&vec![*value], &modulus);
-        let div_res = self.binary_ring.division_algorithm(&euclid_res.x, &modulus);
-        Ok(div_res.remainder[0])
+        Ok(self.extended_euclid_inv(value))
     }
 }
 
@@ -474,9 +574,35 @@ proptest! {
             assert_eq!(b, mul_result);
         }
     }
+     #[test]
+    fn test_mul_div_field(a:u8,b:u8){
+        let mut a = a.clone();
+        let mut b = b.clone();
+        if b!=0 {
+           if a > b {
+                let c = a;
+                a=b;
+                b=c;
+            }
+            let ring = BinaryField::new();
+            let div_result = ring.division_algorithm(&b,&a);
+            let mut mul_result = ring.add(&ring.mul(&div_result.quotient, &a), &div_result.remainder);
+            assert_eq!(b, mul_result);
+        }
+    }
+    #[test]
+    fn test_mul_div_mod(a:u8){
+        let mut a = a;
+        if a>1 {
+            let field = BinaryField::new();
+            let div_result = field.divide_modulus_by_divisor(a);
+            let mul_result = field.add(&field.mul(&div_result.quotient, &a), &div_result.remainder);
+            assert_eq!(mul_result,0);
+        }
+    }
     #[test]
     fn test_field_inverse_u8(a:u8){
-        if a != 0 {
+        if a >=1 {
             let field = BinaryField::new();
             let inv = field.inv(&a).unwrap();
             let prod = field.mul(&a,&inv);

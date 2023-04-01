@@ -10,3 +10,4 @@ cc f111627d5fa2033f4e6b473a204ef7df11687035338f880f5c1edae6b6d63d2b # shrinks to
 cc a9228e5b8fee962ffd9c52994537b046eab4425aea2ad9e1862643c1eddb005e # shrinks to v = [0], count = 3614306528
 cc a0fdf87c1637fef0639eb397797dc8f5fe2c8fa10fd6d3f277fb08a9e65e6e29 # shrinks to v = [0], count = 8
 cc d08279cb08a35abfec0fe3c3b553450a562b043b63266155bf3e5f3942b90b96 # shrinks to a = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128], b = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+cc d684a029d80f923c1463bc34108354e1f543d10728b7aa2027f291c8759d290b # shrinks to a = 1
