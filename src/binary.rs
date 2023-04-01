@@ -4,7 +4,7 @@ use funty::Unsigned;
 use proptest::prelude::*;
 
 use crate::{
-    euclidian_domain::{DivisionAlgorithmResult, EuclidianDomain, ExtendedEuclidResult},
+    euclidian_domain::{DivisionAlgorithmResult, EuclidianDomain},
     Field, Ring,
 };
 pub struct BinaryRing<T: Unsigned> {
@@ -257,51 +257,33 @@ impl<T: Unsigned> Ring for BinaryRing<T> {
 
 pub struct BinaryField<T: Unsigned> {
     _mod_substractor: T,
-    binary_ring: BinaryRing<T>,
 }
 impl<T: Unsigned> BinaryField<T> {
     pub fn new() -> Self {
         let _mod_substractor = T::ZERO;
-        let binary_ring = BinaryRing::new();
         if T::BITS == 8 {
             if let Ok(_mod_substractor) = T::try_from(0b11011) {
-                return BinaryField {
-                    _mod_substractor,
-                    binary_ring,
-                };
+                return BinaryField { _mod_substractor };
             }
         } else if T::BITS == 16 {
             if let Ok(_mod_substractor) = T::try_from(0b101011) {
-                return BinaryField {
-                    _mod_substractor,
-                    binary_ring,
-                };
+                return BinaryField { _mod_substractor };
             }
         } else if T::BITS == 32 {
             if let Ok(_mod_substractor) = T::try_from(0b10001101) {
-                return BinaryField {
-                    _mod_substractor,
-                    binary_ring,
-                };
+                return BinaryField { _mod_substractor };
             }
         } else if T::BITS == 64 {
             if let Ok(_mod_substractor) = T::try_from(0b11011) {
-                return BinaryField {
-                    _mod_substractor,
-                    binary_ring,
-                };
+                return BinaryField { _mod_substractor };
             }
         } else if T::BITS == 128 {
             if let Ok(_mod_substractor) = T::try_from(0b10000111) {
-                return BinaryField {
-                    _mod_substractor,
-                    binary_ring,
-                };
+                return BinaryField { _mod_substractor };
             }
         }
         return BinaryField {
             _mod_substractor: T::ZERO,
-            binary_ring,
         };
     }
     fn degree(value: &T) -> u32 {
@@ -379,10 +361,9 @@ impl<T: Unsigned> BinaryField<T> {
         let mut cur = (self.one(), self.zero());
         let mut prev = (self.zero(), self.one());
         let mut cur_divisor = self.add(a, &self.zero());
-        let mut cur_dividend = self.add(&a, &self.zero());
 
         let div_result = self.divide_modulus_by_divisor(cur_divisor);
-        cur_dividend = cur_divisor;
+        let mut cur_dividend = cur_divisor;
         cur_divisor = div_result.remainder;
         let temp = prev;
         prev = cur;
@@ -586,13 +567,13 @@ proptest! {
             }
             let ring = BinaryField::new();
             let div_result = ring.division_algorithm(&b,&a);
-            let mut mul_result = ring.add(&ring.mul(&div_result.quotient, &a), &div_result.remainder);
+            let mul_result = ring.add(&ring.mul(&div_result.quotient, &a), &div_result.remainder);
             assert_eq!(b, mul_result);
         }
     }
     #[test]
     fn test_mul_div_mod(a:u8){
-        let mut a = a;
+        let a = a;
         if a>1 {
             let field = BinaryField::new();
             let div_result = field.divide_modulus_by_divisor(a);
