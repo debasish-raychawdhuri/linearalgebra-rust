@@ -300,6 +300,18 @@ impl<T: Unsigned> BinaryField<T> {
         let mask = T::ONE << index;
         *value & mask != T::ZERO
     }
+
+    pub fn exponentiate(&self, value: &T, exponent: &T) -> T {
+        let mut exp = T::ONE;
+        for i in (0..T::BITS).rev() {
+            T::try_from(self.bit_at(exponent, i) as u8).map_or((), |bit| {
+                exp = self.mul(&exp, &exp);
+                exp = self.mul(&exp, &(bit * value + (T::ONE - bit) * T::ONE));
+            });
+        }
+        exp
+    }
+
     fn divide_modulus_by_divisor(&self, divisor: T) -> DivisionAlgorithmResult<T> {
         let v_deg = T::BITS;
         let d_deg: u32 = Self::degree(&divisor);
@@ -431,11 +443,18 @@ impl<T: Unsigned> Ring for BinaryField<T> {
 impl<T: Unsigned> Field for BinaryField<T> {
     type InvZeroError = &'static str;
 
-    fn inv(&self, value: &Self::RingMember) -> Result<Self::RingMember, Self::InvZeroError> {
+    // fn inv(&self, value: &Self::RingMember) -> Result<Self::RingMember, Self::InvZeroError> {
+    //     if *value == T::ZERO {
+    //         return Err("Attempt to divide by zero");
+    //     }
+    //     Ok(self.extended_euclid_inv(value))
+    // }
+    fn inv(&self, value: &T) -> Result<T, Self::InvZeroError> {
         if *value == T::ZERO {
-            return Err("Attempt to divide by zero");
+            return Err("Attempt to invert zero");
         }
-        Ok(self.extended_euclid_inv(value))
+        let inv = self.exponentiate(value, &(T::MAX - T::ONE));
+        Ok(inv)
     }
 }
 
