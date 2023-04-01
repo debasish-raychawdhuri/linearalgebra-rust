@@ -403,12 +403,13 @@ impl<T: Unsigned> Ring for BinaryField<T> {
         for _ in 0..T::BITS {
             let top_bit = mul & (T::ONE << (T::BITS - 1));
             mul = mul << 1;
-            if rhs & rhs_musk > T::ZERO {
-                mul = mul ^ lhs;
-            }
-            if top_bit > T::ZERO {
-                mul = mul ^ self._mod_substractor;
-            }
+
+            T::try_from((rhs & rhs_musk != T::ZERO) as u8)
+                .map_or_else(|_| {}, |b| mul = mul ^ (b * lhs));
+
+            T::try_from((top_bit > T::ZERO) as u8)
+                .map_or_else(|_| {}, |b| mul = mul ^ (b * self._mod_substractor));
+
             rhs_musk = rhs_musk >> 1;
         }
         mul
