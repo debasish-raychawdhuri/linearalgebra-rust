@@ -385,11 +385,15 @@ mod tests {
         let res = &lhs * &rhs;
         assert_eq!(exp_res, res);
     }
+
+    #[allow(unused)]
     fn adder<'a>(ring: &'a I32Ring) -> Matrix<'a, I32Ring> {
         let lhs: Matrix<I32Ring> = Matrix::new(ring, vec![vec![1, 2, 5], vec![3, 4, 6]]);
         let rhs: Matrix<I32Ring> = Matrix::new(ring, vec![vec![2, 3, 7], vec![4, 5, 8]]);
         lhs.add(&rhs).unwrap()
     }
+
+    #[allow(unused)]
     fn transposer<'a>(ring: &'a I32Ring) -> Matrix<'a, I32Ring> {
         let v = vec![vec![1, 3, 5], vec![2, 4, 6]];
         Matrix::new(ring, v).transpose()

@@ -144,11 +144,11 @@ impl<'a, T: Field + PartialEq + Clone> Ring for PolynomialRing<'a, T> {
 
         Polynomial { coeffs: sum_coeffs }
     }
-
+    #[allow(unused)]
     fn mul(&self, lhs: &Self::RingMember, rhs: &Self::RingMember) -> Self::RingMember {
         todo!()
     }
-
+    #[allow(unused)]
     fn neg(&self, lhs: &Self::RingMember) -> Self::RingMember {
         todo!()
     }

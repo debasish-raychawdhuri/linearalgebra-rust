@@ -294,6 +294,7 @@ impl<T: Unsigned> BinaryField<T> {
             _mod_substractor: T::ZERO,
         };
     }
+    #[allow(unused)]
     fn degree(value: &T) -> u32 {
         let mut mask = T::ONE << (T::BITS - 1);
         let mut deg = 0;
@@ -320,6 +321,7 @@ impl<T: Unsigned> BinaryField<T> {
         exp
     }
 
+    #[allow(unused)]
     fn divide_modulus_by_divisor(&self, divisor: T) -> DivisionAlgorithmResult<T> {
         let v_deg = T::BITS;
         let d_deg: u32 = Self::degree(&divisor);
@@ -345,6 +347,8 @@ impl<T: Unsigned> BinaryField<T> {
             remainder: value,
         };
     }
+
+    #[allow(unused)]
     fn division_algorithm(&self, value: &T, divisor: &T) -> DivisionAlgorithmResult<T> {
         let v_deg = Self::degree(&value);
         let d_deg: u32 = Self::degree(&divisor);
@@ -373,6 +377,8 @@ impl<T: Unsigned> BinaryField<T> {
             };
         }
     }
+
+    #[allow(unused)]
     fn extended_euclid_inv(&self, a: &T) -> T {
         if *a == T::ONE {
             return T::ONE;

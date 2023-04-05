@@ -70,7 +70,8 @@ pub trait EuclidianDomain: Ring {
                         self.add(&temp.1, &self.mul(&prev.1, &self.neg(&div_result.quotient))),
                     );
                 }
-                Err(e) => {
+
+                Err(_) => {
                     return Err(Error::new(ErrorKind::DivisionByZero));
                 }
             }
