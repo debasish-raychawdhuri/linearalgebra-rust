@@ -4,6 +4,7 @@ use funty::Unsigned;
 use proptest::prelude::*;
 
 use crate::{
+    error::Error,
     euclidian_domain::{DivisionAlgorithmResult, EuclidianDomain},
     Field, Ring,
 };
@@ -129,10 +130,10 @@ impl<T: Unsigned> BinaryRing<T> {
         value[num_of_units] & mask != T::ZERO
     }
 
-    pub fn degree(&self, value: &Vec<T>) -> u32 {
+    pub fn degree(&self, value: &Vec<T>) -> i32 {
         let len = value.len();
         if len == 0 {
-            return 0;
+            return -1;
         }
         let mut clen = 0;
         for i in (0..len).rev() {
@@ -151,7 +152,7 @@ impl<T: Unsigned> BinaryRing<T> {
             }
             mask >>= 1;
         }
-        clen as u32 * T::BITS + bits_in_unit
+        (clen as u32 * T::BITS + bits_in_unit) as i32
     }
 
     pub fn add_in_place(value: &mut Vec<T>, rhs: &[T]) {
@@ -178,18 +179,25 @@ impl<T: Unsigned> EuclidianDomain for BinaryRing<T> {
         &self,
         value: &Self::RingMember,
         divisor: &Self::RingMember,
-    ) -> DivisionAlgorithmResult<Self::RingMember> {
+    ) -> Result<DivisionAlgorithmResult<Self::RingMember>, Error> {
         let v_deg = self.degree(value);
-        let d_deg: u32 = self.degree(divisor);
+        let d_deg: i32 = self.degree(divisor);
+
+        let mut substractor = divisor.clone();
+        BinaryRing::clean_up(&mut substractor);
+
+        if substractor == self.zero() {
+            return Err(Error::new(crate::error::ErrorKind::DivisionByZero));
+        }
+
         let mut value = value.clone();
         if v_deg < d_deg {
-            return DivisionAlgorithmResult {
+            return Ok(DivisionAlgorithmResult {
                 quotient: vec![],
                 remainder: value,
-            };
+            });
         } else {
-            let mut substractor = divisor.clone();
-            Self::shift_left_by_bits(&mut substractor, v_deg - d_deg);
+            Self::shift_left_by_bits(&mut substractor, (v_deg - d_deg) as u32);
             let mut result = vec![T::ZERO];
             for i in (d_deg..=v_deg).rev() {
                 BinaryRing::shift_left(&mut result);
@@ -202,10 +210,10 @@ impl<T: Unsigned> EuclidianDomain for BinaryRing<T> {
 
             Self::clean_up(&mut result);
             Self::clean_up(&mut value);
-            return DivisionAlgorithmResult {
+            return Ok(DivisionAlgorithmResult {
                 quotient: result,
                 remainder: value,
-            };
+            });
         }
     }
 }
@@ -416,11 +424,10 @@ impl<T: Unsigned> Ring for BinaryField<T> {
             let top_bit = mul & (T::ONE << (T::BITS - 1));
             mul = mul << 1;
 
-            T::try_from((rhs & rhs_musk != T::ZERO) as u8)
-                .map_or_else(|_| {}, |b| mul = mul ^ (b * lhs));
+            T::try_from((rhs & rhs_musk != T::ZERO) as u8).map_or((), |b| mul = mul ^ (b * lhs));
 
             T::try_from((top_bit > T::ZERO) as u8)
-                .map_or_else(|_| {}, |b| mul = mul ^ (b * self._mod_substractor));
+                .map_or((), |b| mul = mul ^ (b * self._mod_substractor));
 
             rhs_musk = rhs_musk >> 1;
         }
@@ -441,17 +448,15 @@ impl<T: Unsigned> Ring for BinaryField<T> {
 }
 
 impl<T: Unsigned> Field for BinaryField<T> {
-    type InvZeroError = &'static str;
-
     // fn inv(&self, value: &Self::RingMember) -> Result<Self::RingMember, Self::InvZeroError> {
     //     if *value == T::ZERO {
     //         return Err("Attempt to divide by zero");
     //     }
     //     Ok(self.extended_euclid_inv(value))
     // }
-    fn inv(&self, value: &T) -> Result<T, Self::InvZeroError> {
+    fn inv(&self, value: &T) -> Result<T, Error> {
         if *value == T::ZERO {
-            return Err("Attempt to invert zero");
+            return Err(Error::new(crate::error::ErrorKind::DivisionByZero));
         }
         let inv = self.exponentiate(value, &(T::MAX - T::ONE));
         Ok(inv)
@@ -562,14 +567,14 @@ proptest! {
         let mut b = b.clone();
         BinaryRing::clean_up(&mut a);
         BinaryRing::clean_up(&mut b);
-        if b.len()!=0 {
+        if b.len()!=0  && a.len()!=0{
            if a.len() > b.len() {
                 let c = a;
                 a=b;
                 b=c;
             }
             let ring = BinaryRing::new();
-            let div_result = ring.division_algorithm(&b,&a);
+            let div_result = ring.division_algorithm(&b,&a).unwrap();
             let mut mul_result = ring.add(&ring.mul(&div_result.quotient, &a), &div_result.remainder);
             BinaryRing::clean_up(&mut mul_result);
             assert_eq!(b, mul_result);

@@ -21,6 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+use crate::error::Error;
+use crate::error::ErrorKind;
 use crate::euclidian_domain::DivisionAlgorithmResult;
 use crate::euclidian_domain::EuclidianDomain;
 use crate::Field;
@@ -85,10 +87,14 @@ impl EuclidianDomain for BigIntRing {
         &self,
         value: &Self::RingMember,
         divisor: &Self::RingMember,
-    ) -> DivisionAlgorithmResult<Self::RingMember> {
-        DivisionAlgorithmResult {
-            quotient: value / divisor,
-            remainder: value % divisor,
+    ) -> Result<DivisionAlgorithmResult<Self::RingMember>, Error> {
+        if *divisor != self.zero() {
+            Ok(DivisionAlgorithmResult {
+                quotient: value / divisor,
+                remainder: value % divisor,
+            })
+        } else {
+            Err(Error::new(ErrorKind::DivisionByZero))
         }
     }
 }
@@ -163,7 +169,7 @@ proptest! {
             let a = BigInt::from(a);
             let b = BigInt::from(b);
             let ring = BigIntRing;
-            let eres = ring.extended_euclid(&a,&b);
+            let eres = ring.extended_euclid(&a,&b).unwrap();
             let gcd = eres.gcd;
             assert_eq!(a.clone() % gcd.clone(), ring.zero());
             assert_eq!(b.clone() % gcd.clone(), ring.zero());

@@ -20,6 +20,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+use super::error::Error;
+use super::error::ErrorKind;
 use super::Ring;
 pub struct DivisionAlgorithmResult<R> {
     pub quotient: R,
@@ -37,34 +39,41 @@ pub trait EuclidianDomain: Ring {
         &self,
         value: &Self::RingMember,
         divisor: &Self::RingMember,
-    ) -> DivisionAlgorithmResult<Self::RingMember>;
+    ) -> Result<DivisionAlgorithmResult<Self::RingMember>, Error>;
 
     fn extended_euclid(
         &self,
         a: &Self::RingMember,
         b: &Self::RingMember,
-    ) -> ExtendedEuclidResult<Self::RingMember> {
+    ) -> Result<ExtendedEuclidResult<Self::RingMember>, Error> {
         let mut cur = (self.one(), self.zero());
         let mut prev = (self.zero(), self.one());
         let mut cur_divisor = self.add(a, &self.zero());
         let mut cur_dividend = self.add(b, &self.zero());
         loop {
             let div_result = self.division_algorithm(&cur_dividend, &cur_divisor);
-            if div_result.remainder == self.zero() {
-                return ExtendedEuclidResult {
-                    x: cur.0,
-                    y: cur.1,
-                    gcd: cur_divisor,
-                };
+            match div_result {
+                Ok(div_result) => {
+                    if div_result.remainder == self.zero() {
+                        return Ok(ExtendedEuclidResult {
+                            x: cur.0,
+                            y: cur.1,
+                            gcd: cur_divisor,
+                        });
+                    }
+                    cur_dividend = cur_divisor;
+                    cur_divisor = div_result.remainder;
+                    let temp = prev;
+                    prev = cur;
+                    cur = (
+                        self.add(&temp.0, &self.mul(&prev.0, &self.neg(&div_result.quotient))),
+                        self.add(&temp.1, &self.mul(&prev.1, &self.neg(&div_result.quotient))),
+                    );
+                }
+                Err(e) => {
+                    return Err(Error::new(ErrorKind::DivisionByZero));
+                }
             }
-            cur_dividend = cur_divisor;
-            cur_divisor = div_result.remainder;
-            let temp = prev;
-            prev = cur;
-            cur = (
-                self.add(&temp.0, &self.mul(&prev.0, &self.neg(&div_result.quotient))),
-                self.add(&temp.1, &self.mul(&prev.1, &self.neg(&div_result.quotient))),
-            );
         }
     }
 }

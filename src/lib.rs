@@ -25,10 +25,13 @@ extern crate num_bigint as num;
 use core::fmt::Debug;
 
 pub mod binary;
+pub mod error;
 pub mod euclidian_domain;
 pub mod field;
 pub mod int_ring;
 use std::ops::*;
+
+use error::Error;
 
 pub trait Ring {
     type RingMember: Clone + PartialEq;
@@ -40,8 +43,7 @@ pub trait Ring {
 }
 
 pub trait Field: Ring {
-    type InvZeroError: Debug;
-    fn inv(&self, value: &Self::RingMember) -> Result<Self::RingMember, Self::InvZeroError>;
+    fn inv(&self, value: &Self::RingMember) -> Result<Self::RingMember, Error>;
 }
 
 #[derive(PartialEq, Clone, Debug)]

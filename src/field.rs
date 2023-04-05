@@ -20,6 +20,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+use crate::error::Error;
 use crate::Field;
 use crate::Ring;
 use num::BigUint;
@@ -39,9 +40,9 @@ impl ModularField {
 }
 
 impl Field for ModularField {
-    fn inv(&self, x: &BigUint) -> Result<BigUint, String> {
+    fn inv(&self, x: &BigUint) -> Result<BigUint, Error> {
         if *x == self.zero() {
-            return Err(String::from(""));
+            return Err(Error::new(crate::error::ErrorKind::DivisionByZero));
         }
         let signed_x: BigInt = x.to_bigint().unwrap();
         let signed_mod: BigInt = self.modulus.to_bigint().unwrap();
@@ -53,7 +54,6 @@ impl Field for ModularField {
         }
         Ok(inv.to_biguint().unwrap())
     }
-    type InvZeroError = String;
 }
 
 impl Ring for ModularField {
@@ -99,14 +99,13 @@ impl Ring for F64Field {
 }
 
 impl Field for F64Field {
-    fn inv(&self, x: &f64) -> Result<f64, String> {
+    fn inv(&self, x: &f64) -> Result<f64, Error> {
         if *x == 0f64 {
-            Err(String::from("Division by zero"))
+            Err(Error::new(crate::error::ErrorKind::DivisionByZero))
         } else {
             Ok(self.one() / x)
         }
     }
-    type InvZeroError = String;
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -132,12 +131,11 @@ impl Ring for ComplexField {
 }
 
 impl Field for ComplexField {
-    fn inv(&self, x: &Complex<f64>) -> Result<Complex<f64>, String> {
+    fn inv(&self, x: &Complex<f64>) -> Result<Complex<f64>, Error> {
         if x.re == 0f64 && x.im == 0f64 {
-            Err(String::from("Division by zero"))
+            Err(Error::new(crate::error::ErrorKind::DivisionByZero))
         } else {
             Ok(self.one() / x)
         }
     }
-    type InvZeroError = String;
 }
