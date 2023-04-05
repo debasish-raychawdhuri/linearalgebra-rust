@@ -29,8 +29,8 @@ pub enum ErrorKind {
     InversionOfZero,
     InversionOfNonInvertibleSquareMatrix,
     InversionOfRectangularMatrix,
-    DimensionMismatchForMatrixAddition,
-    DimensionMismatchForMatrixMultiplication,
+    DimensionMismatchForMatrixAddition(usize, usize, usize, usize),
+    DimensionMismatchForMatrixMultiplication(usize, usize, usize, usize),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -39,46 +39,40 @@ pub struct Error {
 }
 
 impl Error {
-    fn get_description(&self) -> &str {
-        match self.error_kind {
-            ErrorKind::DivisionByZero => "Attemt to divide by zero",
-            ErrorKind::InversionOfZero => "Attempt to invert zero",
-            ErrorKind::InversionOfNonInvertibleSquareMatrix => {
-                "Error trying to inverst a non-invertible matrix"
-            }
-            ErrorKind::InversionOfRectangularMatrix => {
-                "Error trying to invert a rectangular matrix"
-            }
-            ErrorKind::DimensionMismatchForMatrixAddition => {
-                "Error trying to add two unequal matrices"
-            }
-            ErrorKind::DimensionMismatchForMatrixMultiplication => {
-                "Error trying to multiply two incompatible dimensions"
-            }
-        }
-    }
-
     pub fn new(error_kind: ErrorKind) -> Self {
         Error { error_kind }
     }
 }
 
-impl StdError for Error {
-    fn source(&self) -> Option<&(dyn StdError + 'static)> {
-        None
-    }
-
-    fn description(&self) -> &str {
-        self.get_description()
-    }
-
-    fn cause(&self) -> Option<&dyn StdError> {
-        self.source()
-    }
-}
+impl StdError for Error {}
 
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.get_description())
+        match self.error_kind {
+            ErrorKind::DivisionByZero => write!(f, "Attempt to divide by zero"),
+            ErrorKind::InversionOfZero => write!(f, "Attempt to invert zero"),
+            ErrorKind::InversionOfNonInvertibleSquareMatrix => {
+                write!(f, "Error trying to invert a non-invertible square matrix")
+            }
+            ErrorKind::InversionOfRectangularMatrix => {
+                write!(f, "Error trying to invert a rectangular matrix")
+            }
+            ErrorKind::DimensionMismatchForMatrixAddition(rows1, cols1, rows2, cols2) => {
+                write!(
+                    f,
+                    "Error trying to add two matrices of incompatible dimensions: \
+                    ({}, {}) and ({}, {})",
+                    rows1, cols1, rows2, cols2
+                )
+            }
+            ErrorKind::DimensionMismatchForMatrixMultiplication(rows1, cols1, rows2, cols2) => {
+                write!(
+                    f,
+                    "Error trying to multiply two matrices of incompatible dimensions: \
+                    ({}, {}) and ({}, {})",
+                    rows1, cols1, rows2, cols2
+                )
+            }
+        }
     }
 }
