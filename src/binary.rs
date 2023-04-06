@@ -210,7 +210,7 @@ impl<T: Unsigned> EuclidianDomain for BinaryRing<T> {
         BinaryRing::clean_up(&mut substractor);
 
         if substractor == self.zero() {
-            return Err(Error::new(crate::error::ErrorKind::DivisionByZero));
+            return Err(Error::DivisionByZero);
         }
 
         let mut value = value.clone();
@@ -485,7 +485,7 @@ impl<T: Unsigned> Field for BinaryField<T> {
     // }
     fn inv(&self, value: &T) -> Result<T, Error> {
         if *value == T::ZERO {
-            return Err(Error::new(crate::error::ErrorKind::DivisionByZero));
+            return Err(crate::error::Error::DivisionByZero);
         }
         let inv = self.exponentiate(value, &(T::MAX - T::ONE));
         Ok(inv)

@@ -42,7 +42,7 @@ impl ModularField {
 impl Field for ModularField {
     fn inv(&self, x: &BigUint) -> Result<BigUint, Error> {
         if *x == self.zero() {
-            return Err(Error::new(crate::error::ErrorKind::DivisionByZero));
+            return Err(Error::DivisionByZero);
         }
         let signed_x: BigInt = x.to_bigint().unwrap();
         let signed_mod: BigInt = self.modulus.to_bigint().unwrap();
@@ -101,7 +101,7 @@ impl Ring for F64Field {
 impl Field for F64Field {
     fn inv(&self, x: &f64) -> Result<f64, Error> {
         if *x == 0f64 {
-            Err(Error::new(crate::error::ErrorKind::DivisionByZero))
+            Err(Error::DivisionByZero)
         } else {
             Ok(self.one() / x)
         }
@@ -133,7 +133,7 @@ impl Ring for ComplexField {
 impl Field for ComplexField {
     fn inv(&self, x: &Complex<f64>) -> Result<Complex<f64>, Error> {
         if x.re == 0f64 && x.im == 0f64 {
-            Err(Error::new(crate::error::ErrorKind::DivisionByZero))
+            Err(Error::DivisionByZero)
         } else {
             Ok(self.one() / x)
         }

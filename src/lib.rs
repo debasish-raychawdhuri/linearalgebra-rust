@@ -116,18 +116,18 @@ impl<'a, F: Field> Matrix<'a, F> {
         &self,
         data1: &Vec<Vec<F::RingMember>>,
         start: usize,
-    ) -> Result<usize, String> {
+    ) -> Result<usize, Error> {
         for i in start..self.rows {
             if data1[i][start] != self.ring.zero() {
                 return Ok(i);
             }
         }
-        return Err(String::from("No non-zero pivot found"));
+        return Err(Error::InversionOfNonInvertibleSquareMatrix);
     }
 
-    pub fn inverse(&self) -> Result<Self, String> {
+    pub fn inverse(&self) -> Result<Self, Error> {
         if self.rows != self.columns {
-            return Err(String::from("Trying to invert a rectangular matrix"));
+            return Err(Error::InversionOfRectangularMatrix);
         }
         let mut data1 = self.data.clone();
         let mut data2 = Self::one(&self.ring, self.rows).data;
@@ -150,7 +150,7 @@ impl<'a, F: Field> Matrix<'a, F> {
                     self.scale_row(&mut data1, &mut data2, i, d_inv);
                 }
                 Err(_) => {
-                    return Err(String::from("Trying to invert a non-invertible matrix"));
+                    return Err(Error::InversionOfNonInvertibleSquareMatrix);
                 }
             }
             for j in i + 1..self.rows {
@@ -225,9 +225,14 @@ impl<'a, F: Ring> Matrix<'a, F> {
         ans
     }
 
-    pub fn add(&self, rhs: &Matrix<'a, F>) -> Result<Matrix<'a, F>, String> {
+    pub fn add(&self, rhs: &Matrix<'a, F>) -> Result<Matrix<'a, F>, Error> {
         if self.rows != rhs.rows || self.columns != rhs.columns {
-            return Result::Err(String::from("Illegal matrix operation"));
+            return Result::Err(Error::DimensionMismatchForMatrixAddition(
+                self.rows,
+                self.columns,
+                rhs.rows,
+                rhs.columns,
+            ));
         } else {
             let mut ans: Matrix<F> = Matrix {
                 ring: self.ring,
@@ -244,9 +249,14 @@ impl<'a, F: Ring> Matrix<'a, F> {
         }
     }
 
-    pub fn sub(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, String> {
+    pub fn sub(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, Error> {
         if self.rows != rhs.rows || self.columns != rhs.columns {
-            return Result::Err(String::from("Illegal matrix operation"));
+            return Result::Err(Error::DimensionMismatchForMatrixAddition(
+                self.rows,
+                self.columns,
+                rhs.rows,
+                rhs.columns,
+            ));
         } else {
             let mut ans: Matrix<F> = Matrix {
                 ring: self.ring.clone(),
@@ -265,9 +275,14 @@ impl<'a, F: Ring> Matrix<'a, F> {
         }
     }
     //vanila matrix multiplication
-    pub fn mul(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, String> {
+    pub fn mul(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, Error> {
         if self.columns != rhs.rows {
-            return Result::Err(String::from("Illegal matrix operation"));
+            return Result::Err(Error::DimensionMismatchForMatrixMultiplication(
+                self.rows,
+                self.columns,
+                rhs.rows,
+                rhs.columns,
+            ));
         } else {
             let mut ans: Matrix<F> = Matrix {
                 ring: self.ring,
@@ -309,7 +324,14 @@ impl<'a, F: Ring> Add<&Matrix<'a, F>> for &'a Matrix<'a, F> {
     type Output = Matrix<'a, F>;
 
     fn add(self, rhs: &Matrix<'a, F>) -> Matrix<'a, F> {
-        self.add(rhs).expect("")
+        match self.add(rhs) {
+            Ok(result) => {
+                return result;
+            }
+            Err(e) => {
+                panic!("{}", e.to_string());
+            }
+        }
     }
 }
 
@@ -317,7 +339,14 @@ impl<'a, F: Ring> Sub<&Matrix<'a, F>> for &'a Matrix<'a, F> {
     type Output = Matrix<'a, F>;
 
     fn sub(self, rhs: &Matrix<'a, F>) -> Matrix<'a, F> {
-        self.sub(rhs).expect("")
+        match self.sub(rhs) {
+            Ok(result) => {
+                return result;
+            }
+            Err(e) => {
+                panic!("{}", e.to_string());
+            }
+        }
     }
 }
 
@@ -325,7 +354,14 @@ impl<'a, F: Ring> Mul<&Matrix<'a, F>> for &'a Matrix<'a, F> {
     type Output = Matrix<'a, F>;
 
     fn mul(self, rhs: &Matrix<'a, F>) -> Matrix<'a, F> {
-        self.mul(rhs).expect("")
+        match self.mul(rhs) {
+            Ok(result) => {
+                return result;
+            }
+            Err(e) => {
+                panic!("{}", e.to_string());
+            }
+        }
     }
 }
 
@@ -333,7 +369,19 @@ impl<'a, F: Field> Div<&Matrix<'a, F>> for &'a Matrix<'a, F> {
     type Output = Matrix<'a, F>;
 
     fn div(self, rhs: &Matrix<F>) -> Matrix<'a, F> {
-        self.mul(&rhs.inverse().expect("")).expect("")
+        match rhs.inverse() {
+            Ok(inv) => match self.mul(&inv) {
+                Ok(result) => {
+                    return result;
+                }
+                Err(e) => {
+                    panic!("{}", e.to_string());
+                }
+            },
+            Err(e) => {
+                panic!("{}", e.to_string());
+            }
+        }
     }
 }
 

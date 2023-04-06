@@ -21,7 +21,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 use super::error::Error;
-use super::error::ErrorKind;
 use super::Ring;
 pub struct DivisionAlgorithmResult<R> {
     pub quotient: R,
@@ -72,7 +71,7 @@ pub trait EuclidianDomain: Ring {
                 }
 
                 Err(_) => {
-                    return Err(Error::new(ErrorKind::DivisionByZero));
+                    return Err(Error::DivisionByZero);
                 }
             }
         }

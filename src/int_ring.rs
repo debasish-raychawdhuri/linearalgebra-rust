@@ -22,7 +22,6 @@
  */
 
 use crate::error::Error;
-use crate::error::ErrorKind;
 use crate::euclidian_domain::DivisionAlgorithmResult;
 use crate::euclidian_domain::EuclidianDomain;
 use crate::Field;
@@ -94,7 +93,7 @@ impl EuclidianDomain for BigIntRing {
                 remainder: value % divisor,
             })
         } else {
-            Err(Error::new(ErrorKind::DivisionByZero))
+            Err(Error::DivisionByZero)
         }
     }
 }
