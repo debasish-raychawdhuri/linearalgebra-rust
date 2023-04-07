@@ -680,4 +680,51 @@ proptest! {
         }
     }
 
+    //write test for binary field inverse gcd like before
+    #[test]
+    fn test_field_inverse_gcd(a:u8){
+        if a != 0 {
+            let field = BinaryField::new();
+            let inv = field.inv(&a).unwrap();
+            let prod = field.mul(&a,&inv);
+            assert_eq!(prod, 1);
+        }
+    }
+    #[test]
+    fn test_field_inverse_gcd_u16(a:u16){
+        if a != 0 {
+            let field = BinaryField::new();
+            let inv = field.inv(&a).unwrap();
+            let prod = field.mul(&a,&inv);
+            assert_eq!(prod, 1);
+        }
+    }
+    #[test]
+    fn test_field_inverse_gcd_u32(a:u32){
+        if a != 0 {
+            let field = BinaryField::new();
+            let inv = field.inv(&a).unwrap();
+            let prod = field.mul(&a,&inv);
+            assert_eq!(prod, 1);
+        }
+    }
+    #[test]
+    fn test_field_inverse_gcd_u64(a:u64){
+        if a != 0 {
+            let field = BinaryField::new();
+            let inv = field.inv(&a).unwrap();
+            let prod = field.mul(&a,&inv);
+            assert_eq!(prod, 1);
+        }
+    }
+    #[test]
+    fn test_field_inverse_gcd_u128(a:u128){
+        if a != 0 {
+            let field = BinaryField::new();
+            let inv = field.inv(&a).unwrap();
+            let prod = field.mul(&a,&inv);
+            assert_eq!(prod, 1);
+        }
+    }
+
 }
