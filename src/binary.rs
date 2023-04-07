@@ -453,18 +453,17 @@ impl<T: Unsigned> Ring for BinaryField<T> {
 
     fn mul(&self, lhs: &Self::RingMember, rhs: &Self::RingMember) -> Self::RingMember {
         let mut mul = T::ZERO;
-        let rhs = *rhs;
-        let mut rhs_musk = T::ONE << (T::BITS - 1);
+        let mut rhs = *rhs;
+        let full_shift = T::BITS - 1;
+        let top_bit_mask = T::ONE << full_shift;
         for _ in 0..T::BITS {
-            let top_bit = mul & (T::ONE << (T::BITS - 1));
-            mul = mul << 1;
+            let top_bit = (mul & top_bit_mask) >> full_shift;
+            mul <<= 1;
 
-            T::try_from((rhs & rhs_musk != T::ZERO) as u8).map_or((), |b| mul = mul ^ (b * lhs));
-
-            T::try_from((top_bit > T::ZERO) as u8)
-                .map_or((), |b| mul = mul ^ (b * self._mod_substractor));
-
-            rhs_musk = rhs_musk >> 1;
+            let b = (rhs & top_bit_mask) >> full_shift;
+            mul ^= b * lhs;
+            mul ^= top_bit * self._mod_substractor;
+            rhs = (rhs ^ top_bit_mask) << 1;
         }
         mul
     }

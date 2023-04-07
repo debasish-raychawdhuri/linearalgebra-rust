@@ -31,7 +31,7 @@ pub fn bench_binary_field_inv(c: &mut Criterion) {
 pub fn bench_binary_field_inv_gcd(c: &mut Criterion) {
     let mut group = c.benchmark_group("binary_field_inv_gcd");
     let field = linearalgebra::binary::BinaryField::<u64>::new();
-    group.bench_function("binary_field_inv", |b| {
+    group.bench_function("binary_field_inv_gcd", |b| {
         b.iter(|| {
             let a = 0xff8f33d23232323u64;
             let b = field.gcd_inv(&a).unwrap();
