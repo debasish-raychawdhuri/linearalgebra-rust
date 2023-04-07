@@ -437,6 +437,12 @@ impl<T: Unsigned> BinaryField<T> {
             );
         }
     }
+    pub fn gcd_inv(&self, value: &T) -> Result<T, Error> {
+        if *value == T::ZERO {
+            return Err(Error::InversionOfZero);
+        }
+        Ok(self.extended_euclid_inv(value))
+    }
 }
 
 impl<T: Unsigned> Ring for BinaryField<T> {
@@ -477,12 +483,6 @@ impl<T: Unsigned> Ring for BinaryField<T> {
 }
 
 impl<T: Unsigned> Field for BinaryField<T> {
-    // fn inv(&self, value: &Self::RingMember) -> Result<Self::RingMember, Self::InvZeroError> {
-    //     if *value == T::ZERO {
-    //         return Err("Attempt to divide by zero");
-    //     }
-    //     Ok(self.extended_euclid_inv(value))
-    // }
     fn inv(&self, value: &T) -> Result<T, Error> {
         if *value == T::ZERO {
             return Err(crate::error::Error::DivisionByZero);
