@@ -335,11 +335,15 @@ impl<T: Unsigned> BinaryField<T> {
 
     pub fn exponentiate(&self, value: &T, exponent: &T) -> T {
         let mut exp = T::ONE;
-        for i in (0..T::BITS).rev() {
-            T::try_from(self.bit_at(exponent, i) as u8).map_or((), |bit| {
-                exp = self.mul(&exp, &exp);
-                exp = self.mul(&exp, &(bit * value + (T::ONE - bit) * T::ONE));
-            });
+        let full_shift = T::BITS - 1;
+        let top_bit_mask = T::ONE << full_shift;
+        let mut exponent = *exponent;
+        for _ in 0..T::BITS {
+            let bit = (exponent & top_bit_mask) >> full_shift;
+            exp = self.mul(&exp, &exp);
+            exp = self.mul(&exp, &(bit * value + (T::ONE - bit) * T::ONE));
+
+            exponent = (exponent ^ top_bit_mask) << 1;
         }
         exp
     }
@@ -486,8 +490,13 @@ impl<T: Unsigned> Field for BinaryField<T> {
         if *value == T::ZERO {
             return Err(crate::error::Error::DivisionByZero);
         }
-        let inv = self.exponentiate(value, &(T::MAX - T::ONE));
-        Ok(inv)
+        let mut exp = T::ONE;
+        for _ in 0..T::BITS - 1 {
+            exp = self.mul(&exp, &exp);
+            exp = self.mul(&exp, &value);
+        }
+        exp = self.mul(&exp, &exp);
+        Ok(exp)
     }
 }
 
@@ -680,7 +689,6 @@ proptest! {
         }
     }
 
-    //write test for binary field inverse gcd like before
     #[test]
     fn test_field_inverse_gcd(a:u8){
         if a != 0 {
