@@ -31,6 +31,46 @@ use crate::{
     euclidian_domain::{DivisionAlgorithmResult, EuclidianDomain},
     Field, Ring,
 };
+
+pub trait BitSpreader {
+    fn spread_bits(self) -> Self;
+}
+
+impl BitSpreader for u8 {
+    #[inline(always)]
+    fn spread_bits(self) -> u8 {
+        (-(self as i8)) as u8
+    }
+}
+
+impl BitSpreader for u16 {
+    #[inline(always)]
+    fn spread_bits(self) -> u16 {
+        (-(self as i16)) as u16
+    }
+}
+
+impl BitSpreader for u32 {
+    #[inline(always)]
+    fn spread_bits(self) -> u32 {
+        (-(self as i32)) as u32
+    }
+}
+
+impl BitSpreader for u64 {
+    #[inline(always)]
+    fn spread_bits(self) -> u64 {
+        (-(self as i64)) as u64
+    }
+}
+
+impl BitSpreader for u128 {
+    #[inline(always)]
+    fn spread_bits(self) -> u128 {
+        (-(self as i128)) as u128
+    }
+}
+
 pub struct BinaryRing<T: Unsigned> {
     _type_flag: T,
 }
@@ -289,7 +329,7 @@ impl<T: Unsigned> Ring for BinaryRing<T> {
 pub struct BinaryField<T: Unsigned> {
     _mod_substractor: T,
 }
-impl<T: Unsigned> BinaryField<T> {
+impl<T: Unsigned + BitSpreader> BinaryField<T> {
     pub fn new() -> Self {
         let _mod_substractor = T::ZERO;
         if T::BITS == 8 {
@@ -449,7 +489,7 @@ impl<T: Unsigned> BinaryField<T> {
     }
 }
 
-impl<T: Unsigned> Ring for BinaryField<T> {
+impl<T: Unsigned + BitSpreader> Ring for BinaryField<T> {
     type RingMember = T;
     fn add(&self, lhs: &Self::RingMember, rhs: &Self::RingMember) -> Self::RingMember {
         *lhs ^ *rhs
@@ -460,12 +500,12 @@ impl<T: Unsigned> Ring for BinaryField<T> {
         let mut rhs = *rhs;
         let full_shift = T::BITS - 1;
         for _ in 0..T::BITS {
-            let top_bit = mul >> full_shift;
+            let top_bit = (mul >> full_shift).spread_bits();
             mul <<= 1;
 
-            let b = rhs >> full_shift;
-            mul ^= b * lhs;
-            mul ^= top_bit * self._mod_substractor;
+            let b = (rhs >> full_shift).spread_bits();
+            mul ^= b & lhs;
+            mul ^= top_bit & self._mod_substractor;
             rhs <<= 1;
         }
         mul
@@ -484,7 +524,7 @@ impl<T: Unsigned> Ring for BinaryField<T> {
     }
 }
 
-impl<T: Unsigned> Field for BinaryField<T> {
+impl<T: Unsigned + BitSpreader> Field for BinaryField<T> {
     fn inv(&self, value: &T) -> Result<T, Error> {
         if *value == T::ZERO {
             return Err(crate::error::Error::DivisionByZero);
