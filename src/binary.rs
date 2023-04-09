@@ -464,10 +464,10 @@ impl<T: Unsigned> Ring for BinaryField<T> {
             let top_bit = (mul & top_bit_mask) >> full_shift;
             mul <<= 1;
 
-            let b = (rhs & top_bit_mask) >> full_shift;
+            let b = rhs >> full_shift;
             mul ^= b * lhs;
             mul ^= top_bit * self._mod_substractor;
-            rhs = (rhs ^ top_bit_mask) << 1;
+            rhs <<= 1;
         }
         mul
     }
