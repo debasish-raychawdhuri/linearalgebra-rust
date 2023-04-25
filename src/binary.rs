@@ -21,7 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-use std::{cmp::max, vec};
+use std::{cmp::max, vec, marker::PhantomData};
 
 use funty::Unsigned;
 use proptest::prelude::*;
@@ -32,7 +32,7 @@ use crate::{
     Field, Ring,
 };
 pub struct BinaryRing<T: Unsigned> {
-    _type_flag: T,
+    _phantom: PhantomData<T>,
 }
 
 struct BitIterator<'a, T: Unsigned> {
@@ -89,7 +89,7 @@ fn bit_length<T: Unsigned>(value: T) -> u32 {
 impl<T: Unsigned> BinaryRing<T> {
     pub fn new() -> Self {
         BinaryRing {
-            _type_flag: T::ZERO,
+            _phantom: PhantomData::<T>,
         }
     }
     pub fn shift_left_by_bits(value: &mut Vec<T>, bits: u32) {
@@ -547,7 +547,7 @@ mod tests {
     fn test_bindary_ring_mult() {
         let v1 = vec![0x0fu8, 0xffu8];
         let v2 = vec![0x0f];
-        let ring = BinaryRing { _type_flag: 0u8 };
+        let ring = BinaryRing::new();
         let result = ring.mul(&v1, &v2);
         assert_eq!(result[0], 0x55);
         assert_eq!(result[1], 0x05);
@@ -556,7 +556,7 @@ mod tests {
     #[test]
     fn test_binary_ring_deg() {
         let v1 = vec![0x0fu8, 0x4fu8];
-        let ring = BinaryRing { _type_flag: 0u8 };
+        let ring = BinaryRing::new();
         assert_eq!(ring.degree(&v1), 14);
     }
     #[test]
