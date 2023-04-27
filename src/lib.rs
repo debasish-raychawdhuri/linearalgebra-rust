@@ -46,6 +46,21 @@ pub trait Field: Ring {
     fn inv(&self, value: &Self::RingMember) -> Result<Self::RingMember, Error>;
 }
 
+#[macro_export]
+macro_rules! matrix {
+    ($ring:expr,[$($($ex:expr),*);*]) => {
+        {
+            let data = [$(
+                [$(
+                    $ex,
+                )*],
+
+            )*];
+            Matrix::new_from_array($ring, data)
+        }
+    };
+}
+
 #[derive(PartialEq, Clone, Debug)]
 pub struct Matrix<'a, F: Ring> {
     ring: &'a F,
@@ -184,6 +199,26 @@ impl<'a, F: Ring> Matrix<'a, F> {
             rows,
             columns,
             data,
+        }
+    }
+
+    pub fn new_from_array<const ROWS: usize, const COLS: usize>(
+        ring: &'a F,
+        data: [[F::RingMember; COLS]; ROWS],
+    ) -> Self {
+        let mut v = Vec::new();
+        for i in 0..ROWS {
+            let mut row = Vec::new();
+            for j in 0..COLS {
+                row.push(data[i][j].clone());
+            }
+            v.push(row);
+        }
+        Matrix {
+            ring: &ring,
+            rows: ROWS,
+            columns: COLS,
+            data: v,
         }
     }
 
@@ -508,5 +543,13 @@ mod tests {
         let inv = mat.inverse().expect("");
         let identity_matrix = Matrix::<ModularField>::one(&ring, 3);
         assert_eq!(identity_matrix, inv.mul(&mat).expect(""));
+    }
+
+    #[test]
+    fn test_matrix_macro() {
+        let ring = I32Ring;
+        let mat = matrix!(&ring, [1, 2, 3; 4, 5, 6]);
+        let exp_res: Matrix<I32Ring> = Matrix::new(&ring, vec![vec![1, 2, 3], vec![4, 5, 6]]);
+        assert_eq!(exp_res, mat);
     }
 }
