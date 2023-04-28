@@ -208,10 +208,7 @@ impl<'a, F: Ring> Matrix<'a, F> {
     ) -> Self {
         let mut v = Vec::new();
         for i in 0..ROWS {
-            let mut row = Vec::new();
-            for j in 0..COLS {
-                row.push(data[i][j].clone());
-            }
+            let row = data[i].to_vec();
             v.push(row);
         }
         Matrix {
