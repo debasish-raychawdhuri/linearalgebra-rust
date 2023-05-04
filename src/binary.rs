@@ -315,7 +315,7 @@ impl_binary_field_default!(u32);
 impl_binary_field_default!(u64);
 impl_binary_field_default!(u128);
 
-trait Newable {
+pub trait Newable {
     fn new() -> Self;
 }
 

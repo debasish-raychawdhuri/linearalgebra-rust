@@ -50,7 +50,7 @@ impl Field for ModularField {
         let ext_gcd = signed_x.extended_gcd(&signed_mod);
         let mut inv = ext_gcd.x % &signed_mod;
         if inv < BigInt::from(0i64) {
-            inv = inv + &signed_mod;
+            inv += &signed_mod;
         }
         Ok(inv.to_biguint().unwrap())
     }

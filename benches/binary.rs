@@ -1,5 +1,6 @@
 //add bechmark for binary field multiplication
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use linearalgebra::binary::Newable;
 use linearalgebra::{Field, Ring};
 
 //write same benchmarks as above for u8

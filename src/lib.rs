@@ -137,7 +137,7 @@ impl<'a, F: Field> Matrix<'a, F> {
                 return Ok(i);
             }
         }
-        return Err(Error::InversionOfNonInvertibleSquareMatrix);
+        Err(Error::InversionOfNonInvertibleSquareMatrix)
     }
 
     pub fn inverse(&self) -> Result<Self, Error> {
@@ -145,7 +145,7 @@ impl<'a, F: Field> Matrix<'a, F> {
             return Err(Error::InversionOfRectangularMatrix);
         }
         let mut data1 = self.data.clone();
-        let mut data2 = Self::one(&self.ring, self.rows).data;
+        let mut data2 = Self::one(self.ring, self.rows).data;
 
         //triangulation of the matrix. make it an upper triangular matrix
         for i in 0..self.rows {
@@ -195,7 +195,7 @@ impl<'a, F: Ring> Matrix<'a, F> {
         let columns = v[0].len();
         let data = v;
         Matrix {
-            ring: &ring,
+            ring,
             rows,
             columns,
             data,
@@ -212,7 +212,7 @@ impl<'a, F: Ring> Matrix<'a, F> {
             v.push(row);
         }
         Matrix {
-            ring: &ring,
+            ring,
             rows: ROWS,
             columns: COLS,
             data: v,
@@ -225,7 +225,7 @@ impl<'a, F: Ring> Matrix<'a, F> {
             data[i][i] = ring.one();
         }
         Matrix {
-            ring: ring,
+            ring,
             rows,
             columns: rows,
             data,
@@ -235,7 +235,7 @@ impl<'a, F: Ring> Matrix<'a, F> {
     pub fn zero(ring: &'a F, rows: usize) -> Self {
         let data = vec![vec![ring.zero(); rows]; rows];
         Matrix {
-            ring: ring,
+            ring,
             rows,
             columns: rows,
             data,
@@ -309,12 +309,12 @@ impl<'a, F: Ring> Matrix<'a, F> {
     //vanila matrix multiplication
     pub fn mul(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, Error> {
         if self.columns != rhs.rows {
-            return Result::Err(Error::DimensionMismatchForMatrixMultiplication(
+            Result::Err(Error::DimensionMismatchForMatrixMultiplication(
                 self.rows,
                 self.columns,
                 rhs.rows,
                 rhs.columns,
-            ));
+            ))
         } else {
             let mut ans: Matrix<F> = Matrix {
                 ring: self.ring,
@@ -338,8 +338,8 @@ impl<'a, F: Ring> Matrix<'a, F> {
         let columns = self.rows;
         let mut ans: Matrix<F> = Matrix {
             ring: self.ring,
-            rows: rows,
-            columns: columns,
+            rows,
+            columns,
             data: vec![vec![self.ring.zero(); columns]; rows],
         };
         for j in 0..columns {
@@ -347,7 +347,7 @@ impl<'a, F: Ring> Matrix<'a, F> {
                 ans.data[i][j] = self.data[j][i].clone();
             }
         }
-        return ans;
+        ans
     }
 }
 
@@ -357,9 +357,7 @@ impl<'a, F: Ring> Add<&Matrix<'a, F>> for &'a Matrix<'a, F> {
 
     fn add(self, rhs: &Matrix<'a, F>) -> Matrix<'a, F> {
         match self.add(rhs) {
-            Ok(result) => {
-                return result;
-            }
+            Ok(result) => result,
             Err(e) => {
                 panic!("{}", e.to_string());
             }
@@ -372,9 +370,7 @@ impl<'a, F: Ring> Sub<&Matrix<'a, F>> for &'a Matrix<'a, F> {
 
     fn sub(self, rhs: &Matrix<'a, F>) -> Matrix<'a, F> {
         match self.sub(rhs) {
-            Ok(result) => {
-                return result;
-            }
+            Ok(result) => result,
             Err(e) => {
                 panic!("{}", e.to_string());
             }
@@ -387,9 +383,7 @@ impl<'a, F: Ring> Mul<&Matrix<'a, F>> for &'a Matrix<'a, F> {
 
     fn mul(self, rhs: &Matrix<'a, F>) -> Matrix<'a, F> {
         match self.mul(rhs) {
-            Ok(result) => {
-                return result;
-            }
+            Ok(result) => result,
             Err(e) => {
                 panic!("{}", e.to_string());
             }
@@ -403,9 +397,7 @@ impl<'a, F: Field> Div<&Matrix<'a, F>> for &'a Matrix<'a, F> {
     fn div(self, rhs: &Matrix<F>) -> Matrix<'a, F> {
         match rhs.inverse() {
             Ok(inv) => match self.mul(&inv) {
-                Ok(result) => {
-                    return result;
-                }
+                Ok(result) => result,
                 Err(e) => {
                     panic!("{}", e.to_string());
                 }
@@ -467,14 +459,14 @@ mod tests {
     }
 
     #[allow(unused)]
-    fn adder<'a>(ring: &'a I32Ring) -> Matrix<'a, I32Ring> {
+    fn adder(ring: &I32Ring) -> Matrix<'_, I32Ring> {
         let lhs: Matrix<I32Ring> = Matrix::new(ring, vec![vec![1, 2, 5], vec![3, 4, 6]]);
         let rhs: Matrix<I32Ring> = Matrix::new(ring, vec![vec![2, 3, 7], vec![4, 5, 8]]);
         lhs.add(&rhs).unwrap()
     }
 
     #[allow(unused)]
-    fn transposer<'a>(ring: &'a I32Ring) -> Matrix<'a, I32Ring> {
+    fn transposer(ring: &I32Ring) -> Matrix<'_, I32Ring> {
         let v = vec![vec![1, 3, 5], vec![2, 4, 6]];
         Matrix::new(ring, v).transpose()
     }
@@ -511,8 +503,8 @@ mod tests {
             &ring,
             vec![
                 vec![one.clone(), two.clone(), three.clone()],
-                vec![two.clone(), one.clone(), three.clone()],
-                vec![three.clone(), one.clone(), three.clone()],
+                vec![two, one.clone(), three.clone()],
+                vec![three.clone(), one, three],
             ],
         );
 
@@ -532,8 +524,8 @@ mod tests {
             &ring,
             vec![
                 vec![one.clone(), two.clone(), three.clone()],
-                vec![one.clone(), two.clone(), one.clone()],
-                vec![three.clone(), one.clone(), three.clone()],
+                vec![one.clone(), two, one.clone()],
+                vec![three.clone(), one, three],
             ],
         );
 
