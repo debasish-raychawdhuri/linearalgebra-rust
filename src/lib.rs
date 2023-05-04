@@ -244,7 +244,7 @@ impl<'a, F: Ring> Matrix<'a, F> {
 
     pub fn scale(&self, scalar: F::RingMember) -> Matrix<F> {
         let mut ans: Matrix<F> = Matrix {
-            ring: self.ring.clone(),
+            ring: self.ring,
             rows: self.rows,
             columns: self.columns,
             data: vec![vec![self.ring.zero(); self.columns]; self.rows],
@@ -259,12 +259,12 @@ impl<'a, F: Ring> Matrix<'a, F> {
 
     pub fn add(&self, rhs: &Matrix<'a, F>) -> Result<Matrix<'a, F>, Error> {
         if self.rows != rhs.rows || self.columns != rhs.columns {
-            return Result::Err(Error::DimensionMismatchForMatrixAddition(
+            Result::Err(Error::DimensionMismatchForMatrixAddition(
                 self.rows,
                 self.columns,
                 rhs.rows,
                 rhs.columns,
-            ));
+            ))
         } else {
             let mut ans: Matrix<F> = Matrix {
                 ring: self.ring,
@@ -283,15 +283,15 @@ impl<'a, F: Ring> Matrix<'a, F> {
 
     pub fn sub(&self, rhs: &Matrix<F>) -> Result<Matrix<F>, Error> {
         if self.rows != rhs.rows || self.columns != rhs.columns {
-            return Result::Err(Error::DimensionMismatchForMatrixAddition(
+            Result::Err(Error::DimensionMismatchForMatrixAddition(
                 self.rows,
                 self.columns,
                 rhs.rows,
                 rhs.columns,
-            ));
+            ))
         } else {
             let mut ans: Matrix<F> = Matrix {
-                ring: self.ring.clone(),
+                ring: self.ring,
                 rows: self.rows,
                 columns: self.columns,
                 data: vec![vec![self.ring.zero(); self.columns]; self.rows],
@@ -337,7 +337,7 @@ impl<'a, F: Ring> Matrix<'a, F> {
         let rows = self.columns;
         let columns = self.rows;
         let mut ans: Matrix<F> = Matrix {
-            ring: self.ring.clone(),
+            ring: self.ring,
             rows: rows,
             columns: columns,
             data: vec![vec![self.ring.zero(); columns]; rows],

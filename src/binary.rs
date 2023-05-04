@@ -21,7 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-use std::{cmp::max, vec, marker::PhantomData};
+use std::{cmp::max, marker::PhantomData, vec};
 
 use funty::Unsigned;
 use proptest::prelude::*;
@@ -86,6 +86,14 @@ fn bit_length<T: Unsigned>(value: T) -> u32 {
     0
 }
 
+impl<T: Unsigned> Default for BinaryRing<T> {
+    fn default() -> Self {
+        BinaryRing {
+            _phantom: PhantomData::<T>,
+        }
+    }
+}
+
 impl<T: Unsigned> BinaryRing<T> {
     pub fn new() -> Self {
         BinaryRing {
@@ -93,7 +101,7 @@ impl<T: Unsigned> BinaryRing<T> {
         }
     }
     pub fn shift_left_by_bits(value: &mut Vec<T>, bits: u32) {
-        if value.len() == 0 {
+        if value.is_empty() {
             return;
         }
         let num_of_units_moved = (bits / T::BITS) as usize;
@@ -101,9 +109,9 @@ impl<T: Unsigned> BinaryRing<T> {
         let orig_len = value.len();
         let bits_in_most_sig_unit = bit_length(value[value.len() - 1]);
         if bits_within_unit + bits_in_most_sig_unit <= T::BITS {
-            value.resize(value.len() + num_of_units_moved as usize, T::ZERO);
+            value.resize(value.len() + num_of_units_moved, T::ZERO);
         } else {
-            value.resize(value.len() + num_of_units_moved as usize + 1, T::ZERO);
+            value.resize(value.len() + num_of_units_moved + 1, T::ZERO);
         }
         let cut_mask =
             ((T::ONE << bits_within_unit) - T::ONE) << ((T::BITS - bits_within_unit) % T::BITS);
@@ -115,13 +123,15 @@ impl<T: Unsigned> BinaryRing<T> {
                     cut_val >> ((T::BITS - bits_within_unit) % T::BITS);
             }
         }
-        for i in 0..num_of_units_moved {
-            value[i] = T::ZERO;
-        }
+
+        value
+            .iter_mut()
+            .take(num_of_units_moved)
+            .for_each(|x| *x = T::ZERO);
     }
 
     pub fn shift_left(value: &mut Vec<T>) {
-        if value.len() == 0 {
+        if value.is_empty() {
             return;
         }
         let top_bit = value[value.len() - 1] & (T::ONE << (T::BITS - 1));
@@ -131,9 +141,9 @@ impl<T: Unsigned> BinaryRing<T> {
         let len = value.len();
         for i in (0..len).rev() {
             let top_bit = value[i] & (T::ONE << (T::BITS - 1));
-            value[i] = value[i] << 1;
+            value[i] <<= 1;
             if i < value.len() - 1 && top_bit > T::ZERO {
-                value[i + 1] = value[i + 1] | T::ONE;
+                value[i + 1] |= T::ONE;
             }
         }
     }
@@ -204,7 +214,7 @@ impl<T: Unsigned> EuclidianDomain for BinaryRing<T> {
         divisor: &Self::RingMember,
     ) -> Result<DivisionAlgorithmResult<Self::RingMember>, Error> {
         let v_deg = self.degree(value);
-        let d_deg: i32 = self.degree(divisor);
+        let d_deg = self.degree(divisor);
 
         let mut substractor = divisor.clone();
         BinaryRing::clean_up(&mut substractor);
@@ -215,10 +225,10 @@ impl<T: Unsigned> EuclidianDomain for BinaryRing<T> {
 
         let mut value = value.clone();
         if v_deg < d_deg {
-            return Ok(DivisionAlgorithmResult {
+            Ok(DivisionAlgorithmResult {
                 quotient: vec![],
                 remainder: value,
-            });
+            })
         } else {
             Self::shift_left_by_bits(&mut substractor, (v_deg - d_deg) as u32);
             let mut result = vec![T::ZERO];
@@ -226,17 +236,17 @@ impl<T: Unsigned> EuclidianDomain for BinaryRing<T> {
                 BinaryRing::shift_left(&mut result);
                 if self.bit_at(&value, i as usize) {
                     BinaryRing::add_in_place(&mut value, &substractor);
-                    BinaryRing::add_in_place(&mut result, &vec![T::ONE]);
+                    BinaryRing::add_in_place(&mut result, &[T::ONE]);
                 }
                 BinaryRing::shift_right(&mut substractor);
             }
 
             Self::clean_up(&mut result);
             Self::clean_up(&mut value);
-            return Ok(DivisionAlgorithmResult {
+            Ok(DivisionAlgorithmResult {
                 quotient: result,
                 remainder: value,
-            });
+            })
         }
     }
 }
@@ -258,7 +268,7 @@ impl<T: Unsigned> Ring for BinaryRing<T> {
     }
 
     fn mul(&self, lhs: &Self::RingMember, rhs: &Self::RingMember) -> Self::RingMember {
-        if lhs.len() == 0 || rhs.len() == 0 {
+        if lhs.is_empty() || rhs.is_empty() {
             return vec![];
         }
         let left_iter = BitIterator::new(lhs);
@@ -289,34 +299,62 @@ impl<T: Unsigned> Ring for BinaryRing<T> {
 pub struct BinaryField<T: Unsigned> {
     _mod_substractor: T,
 }
-impl<T: Unsigned> BinaryField<T> {
-    pub fn new() -> Self {
-        let _mod_substractor = T::ZERO;
-        if T::BITS == 8 {
-            if let Ok(_mod_substractor) = T::try_from(0b11011) {
-                return BinaryField { _mod_substractor };
-            }
-        } else if T::BITS == 16 {
-            if let Ok(_mod_substractor) = T::try_from(0b101011) {
-                return BinaryField { _mod_substractor };
-            }
-        } else if T::BITS == 32 {
-            if let Ok(_mod_substractor) = T::try_from(0b10001101) {
-                return BinaryField { _mod_substractor };
-            }
-        } else if T::BITS == 64 {
-            if let Ok(_mod_substractor) = T::try_from(0b11011) {
-                return BinaryField { _mod_substractor };
-            }
-        } else if T::BITS == 128 {
-            if let Ok(_mod_substractor) = T::try_from(0b10000111) {
-                return BinaryField { _mod_substractor };
+
+macro_rules! impl_binary_field_default {
+    ($t:ty) => {
+        impl Default for BinaryField<$t> {
+            fn default() -> Self {
+                Self::new()
             }
         }
-        return BinaryField {
-            _mod_substractor: T::ZERO,
-        };
+    };
+}
+impl_binary_field_default!(u8);
+impl_binary_field_default!(u16);
+impl_binary_field_default!(u32);
+impl_binary_field_default!(u64);
+impl_binary_field_default!(u128);
+
+trait Newable {
+    fn new() -> Self;
+}
+
+impl Newable for BinaryField<u8> {
+    fn new() -> Self {
+        BinaryField::new_with_mod_substractor(0b11011)
     }
+}
+
+impl Newable for BinaryField<u16> {
+    fn new() -> Self {
+        BinaryField::new_with_mod_substractor(0b101011)
+    }
+}
+
+impl Newable for BinaryField<u32> {
+    fn new() -> Self {
+        BinaryField::new_with_mod_substractor(0b10001101)
+    }
+}
+
+impl Newable for BinaryField<u64> {
+    fn new() -> Self {
+        BinaryField::new_with_mod_substractor(0b11011)
+    }
+}
+impl Newable for BinaryField<u128> {
+    fn new() -> Self {
+        BinaryField::new_with_mod_substractor(0b10000111)
+    }
+}
+
+impl<T: Unsigned> BinaryField<T> {
+    pub fn new_with_mod_substractor(mod_substractor: T) -> Self {
+        BinaryField {
+            _mod_substractor: mod_substractor,
+        }
+    }
+
     #[allow(unused)]
     fn degree(value: &T) -> u32 {
         let mut mask = T::ONE << (T::BITS - 1);
@@ -357,34 +395,34 @@ impl<T: Unsigned> BinaryField<T> {
 
         substractor <<= (v_deg - d_deg - 1) as usize;
 
-        value = value ^ ((substractor & ((T::MAX ^ T::ONE) >> 1)) << 1);
+        value ^= ((substractor & ((T::MAX ^ T::ONE) >> 1)) << 1);
 
         let mut result = T::ONE;
         for i in (d_deg..v_deg).rev() {
             result <<= 1;
             if self.bit_at(&value, i) {
-                value = value ^ substractor;
-                result = result ^ T::ONE;
+                value ^= substractor;
+                result ^= T::ONE;
             }
             substractor >>= 1;
         }
 
-        return DivisionAlgorithmResult {
+        DivisionAlgorithmResult {
             quotient: result,
             remainder: value,
-        };
+        }
     }
 
     #[allow(unused)]
     fn division_algorithm(&self, value: &T, divisor: &T) -> DivisionAlgorithmResult<T> {
-        let v_deg = Self::degree(&value);
-        let d_deg: u32 = Self::degree(&divisor);
+        let v_deg = Self::degree(value);
+        let d_deg: u32 = Self::degree(divisor);
         let mut value = *value;
         if v_deg < d_deg {
-            return DivisionAlgorithmResult {
+            DivisionAlgorithmResult {
                 quotient: T::ZERO,
                 remainder: value,
-            };
+            }
         } else {
             let mut substractor = *divisor;
             substractor <<= (v_deg - d_deg) as usize;
@@ -392,16 +430,16 @@ impl<T: Unsigned> BinaryField<T> {
             for i in (d_deg..=v_deg).rev() {
                 result <<= 1;
                 if self.bit_at(&value, i) {
-                    value = value ^ substractor;
-                    result = result ^ T::ONE;
+                    value ^= substractor;
+                    result ^= T::ONE;
                 }
                 substractor >>= 1;
             }
 
-            return DivisionAlgorithmResult {
+            DivisionAlgorithmResult {
                 quotient: result,
                 remainder: value,
-            };
+            }
         }
     }
 
@@ -492,7 +530,7 @@ impl<T: Unsigned> Field for BinaryField<T> {
         let mut exp = T::ONE;
         for _ in 0..T::BITS - 1 {
             exp = self.mul(&exp, &exp);
-            exp = self.mul(&exp, &value);
+            exp = self.mul(&exp, value);
         }
         exp = self.mul(&exp, &exp);
         Ok(exp)
@@ -510,13 +548,13 @@ mod tests {
         let value = vec![0x0fu8, 0xffu8];
         let mut iter = BitIterator::new(&value);
         for _ in 0..8 {
-            assert_eq!(iter.next().unwrap(), true);
+            assert!(iter.next().unwrap());
         }
         for _ in 0..4 {
-            assert_eq!(iter.next().unwrap(), false);
+            assert!(!iter.next().unwrap());
         }
         for _ in 0..4 {
-            assert_eq!(iter.next().unwrap(), true);
+            assert!(iter.next().unwrap());
         }
         assert_eq!(iter.next(), None);
     }
@@ -533,11 +571,11 @@ mod tests {
     #[test]
     fn test_binary_add_in_place() {
         let mut value = vec![0x0fu8, 0xffu8];
-        BinaryRing::add_in_place(&mut value, &vec![0x0fu8]);
+        BinaryRing::add_in_place(&mut value, &[0x0fu8]);
         assert_eq!(value[0], 0);
         assert_eq!(value[1], 0xffu8);
         assert_eq!(value.len(), 2);
-        BinaryRing::add_in_place(&mut value, &vec![0x0fu8, 0xffu8, 0x12u8]);
+        BinaryRing::add_in_place(&mut value, &[0x0fu8, 0xffu8, 0x12u8]);
         assert_eq!(value[0], 0x0fu8);
         assert_eq!(value[1], 0x00u8);
         assert_eq!(value[2], 0x12u8);
@@ -576,7 +614,7 @@ proptest! {
     #[test]
     fn test_shifts(v:Vec<u8>) {
         let mut w=v.clone();
-        let mut u=v.clone();
+        let mut u=v;
         BinaryRing::clean_up(&mut u);
         BinaryRing::shift_left(&mut w);
         BinaryRing::shift_right(&mut w);
@@ -587,7 +625,7 @@ proptest! {
     #[test]
     fn test_shifts_long(v:Vec<u8>, count in 0..32u32) {
         let mut w=v.clone();
-        let mut u=v.clone();
+        let mut u=v;
         BinaryRing::clean_up(&mut u);
         BinaryRing::shift_left_by_bits(&mut w, count);
         for _ in 0..count{
@@ -599,15 +637,13 @@ proptest! {
     }
     #[test]
     fn test_mul_div(a:Vec<u8>,b:Vec<u8>){
-        let mut a = a.clone();
-        let mut b = b.clone();
+        let mut a = a;
+        let mut b = b;
         BinaryRing::clean_up(&mut a);
         BinaryRing::clean_up(&mut b);
-        if b.len()!=0  && a.len()!=0{
-           if a.len() > b.len() {
-                let c = a;
-                a=b;
-                b=c;
+        if b.is_empty()  && a.is_empty(){
+            if a.len() > b.len() {
+               std::mem::swap(&mut a, &mut b);
             }
             let ring = BinaryRing::new();
             let div_result = ring.division_algorithm(&b,&a).unwrap();
@@ -618,13 +654,11 @@ proptest! {
     }
      #[test]
     fn test_mul_div_field(a:u8,b:u8){
-        let mut a = a.clone();
-        let mut b = b.clone();
+        let mut a = a;
+        let mut b = b;
         if b!=0 {
            if a > b {
-                let c = a;
-                a=b;
-                b=c;
+                std::mem::swap(&mut a, &mut b);
             }
             let ring = BinaryField::new();
             let div_result = ring.division_algorithm(&b,&a);
